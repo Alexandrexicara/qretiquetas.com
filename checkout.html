@@ -182,7 +182,108 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        .payment-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .payment-option {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .payment-option:hover {
+            border-color: #667eea;
+        }
+        .payment-option.selected {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+        .payment-option i {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .payment-option h4 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .payment-option .price-small {
+            font-size: 12px;
+            color: #666;
+        }
+        .payment-option .price-highlight {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .payment-details {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .payment-details.active {
+            display: block;
+        }
+        .installment-info {
+            background: #e8f4fd;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .installment-info p {
+            font-size: 14px;
+            color: #555;
+            margin: 0;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #999;
+        }
+        .step.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+        .step.completed {
+            color: #28a745;
+        }
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .step.active .step-number {
+            background: #667eea;
+        }
+        .step.completed .step-number {
+            background: #28a745;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="checkout-container">
@@ -197,6 +298,33 @@
             </div>
             <p style="color: #666; font-size: 14px; margin-top: 10px;">
                 Acesso vitalício ao sistema completo
+            </p>
+        </div>
+
+        <h3 style="text-align: center; margin-bottom: 15px; color: #333; font-size: 16px;">Escolha a forma de pagamento:</h3>
+
+        <div class="payment-options">
+            <div class="payment-option selected" data-method="avista" onclick="selectPayment('avista')">
+                <i class="fas fa-money-bill-wave" style="color: #28a745;"></i>
+                <h4>À Vista</h4>
+                <div class="price-highlight">R$ 5.400,00</div>
+                <div class="price-small">10% de desconto</div>
+            </div>
+            <div class="payment-option" data-method="parcelado" onclick="selectPayment('parcelado')">
+                <i class="fas fa-credit-card" style="color: #667eea;"></i>
+                <h4>Entrada + Cartão</h4>
+                <div class="price-highlight">R$ 6.000,00</div>
+                <div class="price-small">R$ 3.000 entrada + 3x no cartão</div>
+            </div>
+        </div>
+
+        <div class="payment-details" id="details-parcelado">
+            <div class="installment-info">
+                <p><strong>Etapa 1:</strong> Pagamento de R$ 3.000,00 via PIX (entrada)</p>
+                <p style="margin-top: 8px;"><strong>Etapa 2:</strong> Pagamento do restante em até 3x no cartão</p>
+            </div>
+            <p style="font-size: 13px; color: #666;">
+                <i class="fas fa-info-circle"></i> Seu acesso só será liberado após a conclusão das DUAS etapas de pagamento.
             </p>
         </div>
 
@@ -222,7 +350,7 @@
             </div>
 
             <button type="submit" class="btn-pagar" id="btn-pagar">
-                💳 Gerar Pagamento PIX
+                💳 Gerar Pagamento
             </button>
         </form>
 
@@ -251,7 +379,7 @@
 
         <div class="status success" id="status-sucesso">
             <h3>✅ Pagamento Confirmado!</h3>
-            <p>Seu acesso ao sistema foi liberado.</p>
+            <p id="success-message">Seu acesso ao sistema foi liberado.</p>
             <p style="margin-top: 10px; font-size: 14px;">
                 Enviamos os dados de acesso para seu e-mail.
             </p>
@@ -265,10 +393,42 @@
             <p>Assim que o pagamento for confirmado, você receberá o acesso.</p>
         </div>
 
+        <div class="status pending" id="status-etapa2" style="display: none;">
+            <h3>✅ Entrada Confirmada!</h3>
+            <p>Pagamento de entrada recebido. Aguardando pagamento do cartão...</p>
+            <p style="margin-top: 10px; font-size: 14px;">
+                <strong>Próxima etapa:</strong> Pague o restante em até 3x no cartão.
+            </p>
+            <button class="btn-pagar" style="margin-top: 15px;" onclick="abrirPagamentoCartao()">
+                💳 Pagar com Cartão
+            </button>
+        </div>
+
         <a href="index.html" class="back-link">← Voltar para página inicial</a>
     </div>
 
     <script>
+        let metodoPagamento = 'avista';
+        let pedidoIdAtual = null;
+
+        // Selecionar método de pagamento
+        function selectPayment(method) {
+            metodoPagamento = method;
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`[data-method="${method}"]`).classList.add('selected');
+            
+            if (method === 'parcelado') {
+                document.getElementById('details-parcelado').classList.add('active');
+            } else {
+                document.getElementById('details-parcelado').classList.remove('active');
+            }
+        }
+
+        // Abrir pagamento com cartão (para etapa 2)
+        function abrirPagamentoCartao() {
+            alert('Redirecionando para pagamento com cartão...\n\nEm produção, aqui abriria o checkout do PagBank para finalizar o pagamento.');
+        }
+
         // Máscaras de input
         document.getElementById('cpf').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
@@ -301,7 +461,8 @@
                 cliente: document.getElementById('nome').value,
                 email: document.getElementById('email').value,
                 cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
-                telefone: document.getElementById('telefone').value.replace(/\D/g, '')
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
+                metodo: metodoPagamento
             };
 
             try {
@@ -314,6 +475,7 @@
                 const result = await response.json();
 
                 if (result.sucesso) {
+                    pedidoIdAtual = result.pedido_id;
                     loading.classList.remove('active');
                     document.getElementById('pix-container').classList.add('active');
                     
@@ -327,8 +489,13 @@
                         document.getElementById('pix-code').textContent = result.pix_codigo;
                     }
 
+                    // Atualizar mensagem conforme método
+                    if (metodoPagamento === 'parcelado') {
+                        document.getElementById('success-message').textContent = 'Entrada confirmada! Complete o pagamento do cartão para liberar o acesso.';
+                    }
+
                     // Iniciar polling para verificar status
-                    iniciarVerificacaoStatus(result.pedido_id);
+                    iniciarVerificacaoStatus(result.pedido_id, metodoPagamento);
                 } else {
                     throw new Error(result.erro || 'Erro ao criar pagamento');
                 }
@@ -349,16 +516,38 @@
             });
         }
 
-        function iniciarVerificacaoStatus(pedidoId) {
+        function iniciarVerificacaoStatus(pedidoId, metodo) {
             const interval = setInterval(async () => {
                 try {
                     const response = await fetch(`/api/pedido/${pedidoId}`);
                     const pedido = await response.json();
 
-                    if (pedido.status === 'PAID' || pedido.status === 'paid') {
+                    // Pagamento à vista - libera imediatamente quando pago
+                    if (metodo === 'avista' && (pedido.status === 'PAID' || pedido.status === 'paid')) {
                         clearInterval(interval);
                         document.getElementById('pix-container').classList.remove('active');
                         document.getElementById('status-sucesso').classList.add('active');
+                        return;
+                    }
+
+                    // Pagamento parcelado - verifica etapas
+                    if (metodo === 'parcelado') {
+                        // Etapa 1: Entrada paga, aguardando cartão
+                        if (pedido.status === 'ENTRADA_PAID') {
+                            clearInterval(interval);
+                            document.getElementById('pix-container').classList.remove('active');
+                            document.getElementById('status-etapa2').style.display = 'block';
+                            return;
+                        }
+                        
+                        // Etapa 2: Ambas as etapas concluídas
+                        if (pedido.status === 'PAID' || pedido.status === 'paid' || pedido.status === 'COMPLETO') {
+                            clearInterval(interval);
+                            document.getElementById('status-etapa2').style.display = 'none';
+                            document.getElementById('status-sucesso').classList.add('active');
+                            document.getElementById('success-message').textContent = 'Pagamento completo! Seu acesso ao sistema foi liberado.';
+                            return;
+                        }
                     }
                 } catch (error) {
                     console.error('Erro ao verificar status:', error);

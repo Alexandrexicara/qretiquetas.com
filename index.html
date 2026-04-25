@@ -13,7 +13,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alimentares - Sistema de Etiquetas</title>
+    <title>qrstiquetas.com</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -81,9 +81,22 @@
         .cta-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         footer { background: #1a1a2e; color: white; padding: 40px 20px; text-align: center; }
         footer p { opacity: 0.8; }
+        .main-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 30px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+        .header-content { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .header-logo { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+        .header-title { color: white; font-size: 1.5rem; font-weight: 600; margin: 0; }
+        body { padding-top: 70px; }
+        .hero { min-height: calc(100vh - 70px); }
     </style>
 </head>
 <body>
+    <header class="main-header">
+        <div class="header-content">
+            <img src="logo.png" alt="Logo" class="header-logo">
+            <h1 class="header-title">qrstiquetas.com</h1>
+        </div>
+    </header>
+
     <section class="hero">
         <div class="hero-content">
             <div class="hero-badge"><i class="fas fa-star"></i> Sistema Profissional de Etiquetas</div>
