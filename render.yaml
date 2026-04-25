@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: alimentares
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PAGBANK_TOKEN
+        value: 16a9aa69-d7e4-42c7-9688-ed95ac1e47cf5b77fe6e4bb0b273825a39cf3919dc700987-52dd-45fa-9d9c-29137dd10a7c
+      - key: DATABASE_URL
+        value: sqlite://./data/database.sqlite

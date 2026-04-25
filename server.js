@@ -16,13 +16,10 @@ app.use(express.static('.')); // Serve arquivos estáticos
 const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN;
 const PAGBANK_BASE_URL = 'https://api.pagbank.com';
 
-// Configuração PostgreSQL
+// Configuração PostgreSQL (Render usa DATABASE_URL)
 const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'alimentares',
-    password: process.env.DB_PASSWORD || 'senha',
-    port: process.env.DB_PORT || 5432,
+    connectionString: process.env.DATABASE_URL || 
+        `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'senha'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'alimentares'}`
 });
 
 // Testar conexão
