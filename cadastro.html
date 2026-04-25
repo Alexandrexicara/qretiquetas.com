@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Etiquetas - Alimentares</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+
+/* Header */
+.header {
+    background: #fff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header h1 { 
+    color: #333; 
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.header .user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.header .badge {
+    background: #007BFF;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.header .badge.admin { background: #dc3545; }
+
+/* Cards */
+.card {
+    background: #fff;
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.card h2 {
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #007BFF;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Form Elements */
+.form-group { margin-bottom: 15px; }
+label {
+    display: block;
+    margin-bottom: 6px;
+    color: #555;
+    font-weight: 500;
+    font-size: 14px;
+}
+input, select, textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #007BFF;
+}
+input[type="color"] {
+    height: 45px;
+    padding: 5px;
+    cursor: pointer;
+}
+input[type="date"] { font-family: inherit; }
+textarea { resize: vertical; min-height: 80px; }
+
+/* Buttons */
+.btn {
+    padding: 12px 24px;
+    background: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn:hover { background: #0056b3; transform: translateY(-1px); }
+.btn-success { background: #28a745; }
+.btn-success:hover { background: #218838; }
+.btn-danger { background: #dc3545; }
+.btn-danger:hover { background: #c82333; }
+.btn-warning { background: #ffc107; color: #333; }
+.btn-warning:hover { background: #e0a800; }
+.btn-secondary { background: #6c757d; }
+.btn-secondary:hover { background: #5a6268; }
+.btn-outline {
+    background: transparent;
+    border: 2px solid #007BFF;
+    color: #007BFF;
+}
+.btn-outline:hover { background: #007BFF; color: #fff; }
+.btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+
+/* Messages */
+.alert {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+.alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+.alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+/* Login Section */
+.login-container {
+    max-width: 400px;
+    margin: 50px auto;
+}
+.login-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+}
+.login-tab {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255,255,255,0.3);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #fff;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+.login-tab.active { background: #fff; color: #667eea; }
+.login-tab:hover:not(.active) { background: rgba(255,255,255,0.4); }
+
+/* User List */
+.user-list {
+    display: grid;
+    gap: 10px;
+}
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007BFF;
+}
+.user-item.admin { border-left-color: #dc3545; }
+.user-item .user-details h4 { color: #333; margin-bottom: 3px; }
+.user-item .user-details span { color: #666; font-size: 12px; }
+
+/* Label Preview */
+.labels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+.label-card {
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    background: #fff;
+    page-break-inside: avoid;
+    position: relative;
+    min-height: 160px;
+}
+/* QR Code Position: Vertical (default - QR on top) */
+.label-card.vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.label-card.vertical .label-type {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+.label-card.vertical canvas {
+    margin: 5px auto;
+    order: -1;
+}
+/* QR Code Position: Horizontal for maquininha */
+.label-card.horizontal {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 5px;
+    text-align: left;
+    padding: 8px;
+    min-height: 100px;
+}
+.label-card.horizontal .label-type {
+    grid-column: 1 / -1;
+    position: static;
+    width: fit-content;
+    justify-self: end;
+    font-size: 8px;
+    padding: 1px 4px;
+}
+.label-card.horizontal canvas {
+    grid-row: 2 / 3;
+    grid-column: 1;
+    margin: 0;
+    align-self: center;
+}
+.label-card.horizontal .label-content {
+    grid-row: 2 / 3;
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+}
+.label-card.horizontal h3 {
+    font-size: 11px;
+    margin: 0;
+    line-height: 1.2;
+}
+.label-card.horizontal p {
+    font-size: 9px;
+    margin: 0;
+    line-height: 1.2;
+}
+.label-card.horizontal .label-lote,
+.label-card.horizontal .label-validade {
+    font-size: 16px;
+    margin: 1px 0;
+}
+.label-card.horizontal .label-preco {
+    font-size: 14px;
+    margin: 2px 0;
+}
+.label-card.horizontal .label-id {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin: 5px -8px -8px -8px;
+    font-size: 9px;
+    padding: 2px 6px;
+}
+.label-card.interno { border-color: #007BFF; }
+.label-card.externo { border-color: #28a745; }
+.label-card .label-type {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.label-card.interno .label-type { background: #007BFF; color: #fff; }
+.label-card.externo .label-type { background: #28a745; color: #fff; }
+.label-card h3 { 
+    font-size: 14px; 
+    margin: 10px 0 5px; 
+    color: #333;
+    font-weight: 600;
+}
+.label-card p { 
+    font-size: 11px; 
+    margin: 3px 0; 
+    color: #666;
+}
+.label-card .label-lote { 
+    font-weight: bold; 
+    color: #333; 
+    font-size: 24px;
+}
+.label-card .label-id {
+    font-size: 10px;
+    color: #000;
+    padding: 4px 8px;
+    margin: 10px -10px -10px -10px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+.label-card .label-validade {
+    color: #dc3545;
+    font-weight: 500;
+}
+.label-card canvas {
+    margin: 10px auto;
+    display: block;
+}
+.label-card .label-preco {
+    font-size: 24px;
+    font-weight: bold;
+    color: #28a745;
+    margin: 8px 0;
+}
+.label-card.horizontal .label-preco {
+    font-size: 18px;
+}
+
+/* History */
+.history-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item .info h4 { font-size: 14px; color: #333; margin-bottom: 3px; }
+.history-item .info span { font-size: 12px; color: #666; }
+.history-item .actions { display: flex; gap: 8px; }
+
+/* Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+.stat-card h3 { font-size: 32px; margin-bottom: 5px; }
+.stat-card p { font-size: 14px; opacity: 0.9; }
+
+/* External Fields */
+.externo-fields {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border-left: 4px solid #28a745;
+}
+
+/* Print Styles */
+@media print {
+    body { background: #fff; padding: 0; margin: 0; }
+    .header, .no-print, .btn-group, .card:not(.print-only) { display: none !important; }
+    .labels-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 5mm;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 5mm;
+    }
+    .label-card {
+        width: 80mm;
+        height: 40mm;
+        max-width: none;
+        margin: 0 auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-sizing: border-box;
+        border: 2px solid #333;
+        border-radius: 4px;
+    }
+    .label-card.horizontal {
+        display: grid;
+        grid-template-columns: 35mm 1fr;
+        grid-template-rows: auto 1fr auto;
+        height: 40mm;
+        padding: 3mm;
+        gap: 2mm;
+    }
+    .label-card.horizontal canvas {
+        width: 30mm !important;
+        height: 30mm !important;
+    }
+    .label-card.horizontal .label-type {
+        font-size: 8px;
+        padding: 1px 3px;
+    }
+    .label-card.horizontal h3 {
+        font-size: 10px;
+        margin: 0;
+    }
+    .label-card.horizontal .label-preco,
+    .label-card.horizontal .label-lote,
+    .label-card.horizontal .label-validade {
+        font-size: 14px;
+        margin: 1px 0;
+    }
+    .label-card.horizontal p {
+        font-size: 8px;
+        margin: 1px 0;
+    }
+    .label-card.horizontal .label-id {
+        display: block !important;
+        visibility: visible !important;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        color: #000 !important;
+        background: transparent !important;
+        font-size: 9px;
+        padding: 2px 4px;
+        margin: 2mm -3mm -3mm -3mm;
+        text-align: center;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 0.5px;
+    }
+    .label-card .label-id {
+        display: block !important;
+        visibility: visible !important;
+        color: #000 !important;
+        background: transparent !important;
+        font-size: 9px;
+        padding: 2px 4px;
+        margin: 5px -8px -8px -8px;
+        text-align: center;
+    }
+}
+
+/* Hidden */
+.hidden { display: none !important; }
+
+/* Section Navigation */
+.nav-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: #fff;
+    padding: 5px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.nav-tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s;
+}
+.nav-tab:hover { color: #007BFF; }
+.nav-tab.active { background: #007BFF; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- LOGIN SECTION -->
+    <div id="loginSection">
+        <div class="login-container">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #fff; font-size: 32px; margin-bottom: 10px;">📦 QRetiquetas.com</h1>
+                <p style="color: rgba(255,255,255,0.8);">Sistema de Etiquetas e Controle</p>
+            </div>
+            
+            <div class="login-tabs">
+                <button class="login-tab active" onclick="showLoginTab('login')">Login</button>
+                <button class="login-tab" onclick="showLoginTab('register')">Cadastro</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="card" id="loginForm">
+                <h2>🔐 Acessar Sistema</h2>
+                <div id="loginMsg"></div>
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="loginUser" placeholder="Digite seu usuário">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="loginPass" placeholder="Digite sua senha">
+                </div>
+                <button class="btn btn-success" onclick="login()" style="width: 100%;">
+                    Entrar
+                </button>
+            </div>
+            
+            <!-- Register Form -->
+            <div class="card hidden" id="registerForm">
+                <h2>📝 Cadastro de Cliente</h2>
+                <div id="registerMsg"></div>
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="regNome" placeholder="Seu nome completo">
+                </div>
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="regUser" placeholder="Crie um nome de usuário">
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="regPass" placeholder="Crie uma senha">
+                </div>
+                <button class="btn btn-success" onclick="register()" style="width: 100%;">
+                    Cadastrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SECTION -->
+    <div id="appSection" class="hidden">
+        <!-- Header -->
+        <div class="header">
+            <h1>📦 Sistema de Etiquetas-QRetiquetas.com</h1>
+            <div class="user-info">
+                <span id="currentUserName">Usuário</span>
+                <span class="badge" id="userTypeBadge">Cliente</span>
+                <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs no-print">
+            <button class="nav-tab active" onclick="showSection('labels')">📋 Etiquetas</button>
+            <button class="nav-tab" onclick="showSection('history')">📜 Histórico</button>
+            <button class="nav-tab admin-only hidden" onclick="showSection('admin')">👤 Admin</button>
+        </div>
+
+        <!-- Labels Section -->
+        <div id="labelsSection" class="section">
+            <!-- Stats -->
+            <div class="stats-grid no-print">
+                <div class="stat-card">
+                    <h3 id="statTotal">0</h3>
+                    <p>Total Etiquetas</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="statInterno">0</h3>
+                    <p>Internas</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="statExterno">0</h3>
+                    <p>Externas</p>
+                </div>
+            </div>
+
+            <!-- Label Form -->
+            <div class="card no-print">
+                <h2>🏷️ Gerar Nova Etiqueta</h2>
+                <div class="form-group">
+                    <label>Produto</label>
+                    <input type="text" id="produto" placeholder="Ex: Arroz Integral 5kg">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Lote</label>
+                        <input type="text" id="lote" placeholder="Ex: L001">
+                    </div>
+                    <div class="form-group">
+                        <label>Validade</label>
+                        <input type="date" id="validade">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Quantidade</label>
+                        <input type="number" id="quantidade" value="1" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Cor da Etiqueta</label>
+                        <input type="color" id="cor" value="#ffffff">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Controle</label>
+                    <select id="tipoControle" onchange="toggleExternoFields()">
+                        <option value="interno">🔵 Interno (Controle de Estoque)</option>
+                        <option value="externo">🟢 Externo / Comercial (Venda)</option>
+                    </select>
+                </div>
+                
+                <!-- External Fields -->
+                <div id="externoFields" class="externo-fields hidden">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Peso</label>
+                            <input type="text" id="peso" placeholder="Ex: 5kg, 500g">
+                        </div>
+                        <div class="form-group">
+                            <label>Preço (R$)</label>
+                            <input type="text" id="preco" placeholder="Ex: 19,90" style="font-size: 18px; font-weight: bold;">
+                        </div>
+                        <div class="form-group">
+                            <label>Cor do Preço</label>
+                            <select id="corPreco">
+                                <option value="#dc3545" selected>🔴 Vermelho (padrão)</option>
+                                <option value="#28a745">🟢 Verde</option>
+                                <option value="#007BFF">🔵 Azul</option>
+                                <option value="#ffc107">🟡 Amarelo</option>
+                                <option value="#fd7e14">🟠 Laranja</option>
+                                <option value="#6f42c1">🟣 Roxo</option>
+                                <option value="#e83e8c">🩷 Rosa</option>
+                                <option value="#20c997">🩵 Turquesa</option>
+                                <option value="#6c757d">⚫ Cinza</option>
+                                <option value="#000000">⬛ Preto</option>
+                                <option value="#ffffff">⬜ Branco</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Nome da Empresa</label>
+                            <input type="text" id="empresa" placeholder="Nome da empresa">
+                        </div>
+                        <div class="form-group">
+                            <label>CNPJ</label>
+                            <input type="text" id="cnpj" placeholder="00.000.000/0000-00">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ingredientes</label>
+                        <textarea id="ingredientes" placeholder="Liste os ingredientes..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Fabricante</label>
+                        <input type="text" id="fabricante" placeholder="Nome do fabricante">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="gerarEtiquetas()">
+                        ✨ Gerar Etiquetas
+                    </button>
+                    <button class="btn btn-warning" onclick="imprimirEtiquetas()">
+                        🖨️ Imprimir
+                    </button>
+                    <button class="btn btn-secondary" onclick="limparFormulario()">
+                        🗑️ Limpar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="card print-only" id="previewCard" style="display: none;">
+                <h2>📄 Pré-visualização</h2>
+                <div id="preview" class="labels-grid"></div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div id="historySection" class="section hidden">
+            <div class="card">
+                <h2>📜 Histórico de Etiquetas</h2>
+                <div id="historyList" class="history-list">
+                    <p style="color: #666; text-align: center; padding: 20px;">
+                        Nenhuma etiqueta gerada ainda.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Section -->
+        <div id="adminSection" class="section hidden">
+            <div class="card">
+                <h2>⚙️ Configurações do Sistema</h2>
+                <div class="form-group">
+                    <label>Posição do QR Code na Etiqueta</label>
+                    <select id="qrPosicao" onchange="salvarConfigQR()">
+                        <option value="vertical">📱 QR Acima (Vertical)</option>
+                        <option value="horizontal">↔️ QR ao Lado (Horizontal)</option>
+                    </select>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        Define como o QR Code aparece nas etiquetas geradas.
+                    </small>
+                </div>
+                <div id="configMsg"></div>
+            </div>
+
+            <div class="card">
+                <h2>👤 Gerenciamento de Colaboradores</h2>
+                <p class="alert alert-info">
+                    Somente administradores podem criar novos colaboradores e definir permissões.
+                </p>
+                
+                <div id="adminMsg"></div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="adminNome" placeholder="Nome do usuário">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Usuário</label>
+                        <select id="adminTipo">
+                            <option value="cliente">Colaboradores</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Usuário</label>
+                        <input type="text" id="adminUser" placeholder="Nome de login">
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="adminPass" placeholder="Senha inicial">
+                    </div>
+                </div>
+                
+                <button class="btn btn-success" onclick="criarUsuarioAdmin()">
+                    ➕ Criar Usuário
+                </button>
+            </div>
+
+            <div class="card">
+                <h2>👥 Colaboradores Cadastrados</h2>
+                <div id="usersList" class="user-list">
+                    <!-- Users will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// DATA MANAGEMENT
+// ============================================
+
+const DataManager = {
+    getUsers() {
+        const users = localStorage.getItem('alimentares_users');
+        return users ? JSON.parse(users) : this.getDefaultUsers();
+    },
+    
+    saveUsers(users) {
+        localStorage.setItem('alimentares_users', JSON.stringify(users));
+    },
+    
+    getDefaultUsers() {
+        return [
+            { id: 1, nome: 'Administrador', user: 'admin', pass: 'admin123', tipo: 'admin', createdAt: new Date().toISOString() }
+        ];
+    },
+    
+    getLabels() {
+        const labels = localStorage.getItem('alimentares_labels');
+        return labels ? JSON.parse(labels) : [];
+    },
+    
+    saveLabels(labels) {
+        localStorage.setItem('alimentares_labels', JSON.stringify(labels));
+    },
+    
+    addLabel(label) {
+        const labels = this.getLabels();
+        labels.unshift(label);
+        this.saveLabels(labels);
+        return labels;
+    },
+    
+    deleteLabel(id) {
+        let labels = this.getLabels();
+        labels = labels.filter(l => l.id !== id);
+        this.saveLabels(labels);
+        return labels;
+    },
+    
+    addUser(user) {
+        const users = this.getUsers();
+        user.id = Date.now();
+        user.createdAt = new Date().toISOString();
+        users.push(user);
+        this.saveUsers(users);
+        return users;
+    },
+    
+    getConfig() {
+        const config = localStorage.getItem('alimentares_config');
+        return config ? JSON.parse(config) : { qrPosicao: 'vertical' };
+    },
+    
+    saveConfig(config) {
+        localStorage.setItem('alimentares_config', JSON.stringify(config));
+    },
+};
+
+// ============================================
+// AUTHENTICATION
+// ============================================
+
+let currentUser = null;
+
+function init() {
+    // Check if user is logged in
+    const savedUser = sessionStorage.getItem('alimentares_currentUser');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showApp();
+    }
+    // Load QR position config
+    const config = DataManager.getConfig();
+    const qrSelect = document.getElementById('qrPosicao');
+    if (qrSelect) qrSelect.value = config.qrPosicao || 'vertical';
+    updateStats();
+}
+
+function showLoginTab(tab) {
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (tab === 'login') {
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+    } else {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+    }
+}
+
+function login() {
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const msgDiv = document.getElementById('loginMsg');
+    
+    if (!user || !pass) {
+        showMessage(msgDiv, 'Preencha todos os campos!', 'error');
+        return;
+    }
+    
+    const users = DataManager.getUsers();
+    const found = users.find(u => u.user === user && u.pass === pass);
+    
+    if (found) {
+        currentUser = found;
+        sessionStorage.setItem('alimentares_currentUser', JSON.stringify(found));
+        showApp();
+    } else {
+        showMessage(msgDiv, 'Usuário ou senha incorretos!', 'error');
+    }
+}
+
+function register() {
+    const nome = document.getElementById('regNome').value.trim();
+    const user = document.getElementById('regUser').value.trim();
+    const pass = document.getElementById('regPass').value;
+    const msgDiv = document.getElementById('registerMsg');
+    
+    if (!nome || !user || !pass) {
+        showMessage(msgDiv, 'Preencha todos os campos!', 'error');
+        return;
+    }
+    
+    const users = DataManager.getUsers();
+    if (users.find(u => u.user === user)) {
+        showMessage(msgDiv, 'Este usuário já existe!', 'error');
+        return;
+    }
+    
+    DataManager.addUser({
+        nome,
+        user,
+        pass,
+        tipo: 'cliente'
+    });
+    
+    showMessage(msgDiv, 'Cadastro realizado! Faça login.', 'success');
+    document.getElementById('regNome').value = '';
+    document.getElementById('regUser').value = '';
+    document.getElementById('regPass').value = '';
+    
+    setTimeout(() => showLoginTab('login'), 1500);
+}
+
+function logout() {
+    currentUser = null;
+    sessionStorage.removeItem('alimentares_currentUser');
+    document.getElementById('loginSection').classList.remove('hidden');
+    document.getElementById('appSection').classList.add('hidden');
+    document.getElementById('loginUser').value = '';
+    document.getElementById('loginPass').value = '';
+}
+
+function showApp() {
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('appSection').classList.remove('hidden');
+    
+    // Update header
+    document.getElementById('currentUserName').textContent = currentUser.nome;
+    const badge = document.getElementById('userTypeBadge');
+    badge.textContent = currentUser.tipo === 'admin' ? 'Administrador' : 'Cliente';
+    badge.className = 'badge ' + (currentUser.tipo === 'admin' ? 'admin' : '');
+    
+    // Show admin section if admin
+    if (currentUser.tipo === 'admin') {
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+        // Load config for admin
+        const config = DataManager.getConfig();
+        const qrSelect = document.getElementById('qrPosicao');
+        if (qrSelect) qrSelect.value = config.qrPosicao || 'vertical';
+        loadUsersList();
+    }
+    
+    updateStats();
+    loadHistory();
+}
+
+// ============================================
+// LABEL GENERATION
+// ============================================
+
+function toggleExternoFields() {
+    const tipo = document.getElementById('tipoControle').value;
+    const fields = document.getElementById('externoFields');
+    fields.classList.toggle('hidden', tipo !== 'externo');
+}
+
+function gerarEtiquetas() {
+    const produto = document.getElementById('produto').value.trim();
+    const lote = document.getElementById('lote').value.trim();
+    const validade = document.getElementById('validade').value;
+    const quantidade = parseInt(document.getElementById('quantidade').value) || 1;
+    const cor = document.getElementById('cor').value;
+    const tipo = document.getElementById('tipoControle').value;
+    
+    if (!produto || !lote || !validade) {
+        alert('Preencha Produto, Lote e Validade!');
+        return;
+    }
+    
+    const peso = document.getElementById('peso').value.trim();
+    const preco = document.getElementById('preco').value.trim();
+    const corPreco = document.getElementById('corPreco').value;
+    const empresa = document.getElementById('empresa').value.trim();
+    const cnpj = document.getElementById('cnpj').value.trim();
+    const ingredientes = document.getElementById('ingredientes').value.trim();
+    const fabricante = document.getElementById('fabricante').value.trim();
+    
+    // Get QR position from config
+    const config = DataManager.getConfig();
+    const qrPosicao = config.qrPosicao || 'vertical';
+    
+    const labels = [];
+    const previewDiv = document.getElementById('preview');
+    const previewCard = document.getElementById('previewCard');
+    previewDiv.innerHTML = '';
+    previewCard.style.display = 'block';
+    
+    for (let i = 0; i < quantidade; i++) {
+        const labelId = 'LBL-' + Date.now() + '-' + i;
+        const labelData = {
+            id: labelId,
+            produto,
+            lote,
+            validade,
+            cor,
+            tipo,
+            peso,
+            preco,
+            corPreco,
+            empresa,
+            cnpj,
+            ingredientes,
+            fabricante,
+            createdBy: currentUser.nome,
+            createdAt: new Date().toLocaleString('pt-BR'),
+            printId: 'qr-' + labelId
+        };
+        
+        labels.push(labelData);
+        DataManager.addLabel(labelData);
+        
+        // Create label HTML
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'label-card ' + tipo + ' ' + qrPosicao;
+        labelDiv.style.backgroundColor = cor;
+        
+        const contentHtml = qrPosicao === 'horizontal' 
+            ? `<div class="label-content">
+                <h3>${escapeHtml(produto)}</h3>
+                ${empresa ? `<p style="font-size: 9px; font-weight: bold;">${escapeHtml(empresa)}</p>` : ''}
+                ${cnpj ? `<p style="font-size: 8px;">CNPJ: ${escapeHtml(cnpj)}</p>` : ''}
+                ${preco ? `<p class="label-preco" style="color: ${corPreco} !important;">R$ ${escapeHtml(preco)}</p>` : ''}
+                <p class="label-lote">Lote: ${escapeHtml(lote)}</p>
+                <p class="label-validade">Validade: ${formatDate(validade)}</p>
+                ${tipo === 'externo' && peso ? `<p>Peso: ${escapeHtml(peso)}</p>` : ''}
+                ${tipo === 'externo' && fabricante ? `<p>Fab: ${escapeHtml(fabricante)}</p>` : ''}
+               </div>
+               <canvas id="qr-${labelId}" width="70" height="70"></canvas>
+               <p class="label-id">${labelId}</p>`
+            : `<span class="label-type">${tipo}</span>
+               <h3>${escapeHtml(produto)}</h3>
+               ${empresa ? `<p style="font-size: 11px; font-weight: bold;">${escapeHtml(empresa)}</p>` : ''}
+               ${cnpj ? `<p style="font-size: 10px;">CNPJ: ${escapeHtml(cnpj)}</p>` : ''}
+               ${preco ? `<p class="label-preco" style="color: ${corPreco} !important;">R$ ${escapeHtml(preco)}</p>` : ''}
+               <p class="label-lote">Lote: ${escapeHtml(lote)}</p>
+               <p class="label-validade">Validade: ${formatDate(validade)}</p>
+               ${tipo === 'externo' && peso ? `<p>Peso: ${escapeHtml(peso)}</p>` : ''}
+               ${tipo === 'externo' && fabricante ? `<p>Fab: ${escapeHtml(fabricante)}</p>` : ''}
+               <canvas id="qr-${labelId}" width="80" height="80"></canvas>
+               <p class="label-id">${labelId}</p>`;
+        
+        labelDiv.innerHTML = contentHtml;
+        previewDiv.appendChild(labelDiv);
+        
+        // Generate QR Code
+        setTimeout(() => {
+            new QRious({
+                element: document.getElementById('qr-' + labelId),
+                value: JSON.stringify({
+                    id: labelId,
+                    produto,
+                    lote,
+                    validade,
+                    tipo
+                }),
+                size: qrPosicao === 'horizontal' ? 70 : 80,
+                level: 'H'
+            });
+        }, 10);
+    }
+    
+    updateStats();
+    loadHistory();
+    alert(`${quantidade} etiqueta(s) gerada(s) com sucesso!`);
+}
+
+function imprimirEtiquetas() {
+    window.print();
+}
+
+function limparFormulario() {
+    document.getElementById('produto').value = '';
+    document.getElementById('lote').value = '';
+    document.getElementById('validade').value = '';
+    document.getElementById('quantidade').value = '1';
+    document.getElementById('cor').value = '#ffffff';
+    document.getElementById('tipoControle').value = 'interno';
+    document.getElementById('peso').value = '';
+    document.getElementById('preco').value = '';
+    document.getElementById('corPreco').value = '#dc3545';
+    document.getElementById('empresa').value = '';
+    document.getElementById('cnpj').value = '';
+    document.getElementById('ingredientes').value = '';
+    document.getElementById('fabricante').value = '';
+    toggleExternoFields();
+    document.getElementById('preview').innerHTML = '';
+    document.getElementById('previewCard').style.display = 'none';
+}
+
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+function criarUsuarioAdmin() {
+    if (!currentUser || currentUser.tipo !== 'admin') {
+        alert('Apenas administradores podem criar usuários!');
+        return;
+    }
+    
+    const nome = document.getElementById('adminNome').value.trim();
+    const user = document.getElementById('adminUser').value.trim();
+    const pass = document.getElementById('adminPass').value;
+    const tipo = document.getElementById('adminTipo').value;
+    const msgDiv = document.getElementById('adminMsg');
+    
+    if (!nome || !user || !pass) {
+        showMessage(msgDiv, 'Preencha todos os campos!', 'error');
+        return;
+    }
+    
+    const users = DataManager.getUsers();
+    if (users.find(u => u.user === user)) {
+        showMessage(msgDiv, 'Este usuário já existe!', 'error');
+        return;
+    }
+    
+    DataManager.addUser({ nome, user, pass, tipo });
+    
+    showMessage(msgDiv, `Usuário "${nome}" criado com sucesso!`, 'success');
+    document.getElementById('adminNome').value = '';
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    
+    loadUsersList();
+}
+
+function loadUsersList() {
+    const users = DataManager.getUsers();
+    const container = document.getElementById('usersList');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center;">Nenhum usuário cadastrado.</p>';
+        return;
+    }
+    
+    container.innerHTML = users.map(u => `
+        <div class="user-item ${u.tipo}">
+            <div class="user-details">
+                <h4>${escapeHtml(u.nome)} ${u.tipo === 'admin' ? '👑' : ''}</h4>
+                <span>@${escapeHtml(u.user)} • ${u.tipo.toUpperCase()}</span>
+            </div>
+            ${u.id !== currentUser.id ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">
+                    🗑️
+                </button>
+            ` : '<span style="color: #999; font-size: 12px;">Você</span>'}
+        </div>
+    `).join('');
+}
+
+function deleteUser(id) {
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+    DataManager.deleteUser(id);
+    loadUsersList();
+}
+
+function salvarConfigQR() {
+    const posicao = document.getElementById('qrPosicao').value;
+    const config = DataManager.getConfig();
+    config.qrPosicao = posicao;
+    DataManager.saveConfig(config);
+    showMessage(document.getElementById('configMsg'), 
+        `Posição do QR Code alterada para: ${posicao === 'vertical' ? 'QR Acima' : 'QR ao Lado'}`, 
+        'success');
+}
+
+// ============================================
+// HISTORY
+// ============================================
+
+function loadHistory() {
+    const labels = DataManager.getLabels();
+    const container = document.getElementById('historyList');
+    
+    if (labels.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Nenhuma etiqueta gerada ainda.</p>';
+        return;
+    }
+    
+    container.innerHTML = labels.slice(0, 50).map(l => `
+        <div class="history-item">
+            <div class="info">
+                <h4>${escapeHtml(l.produto)} <small style="color: ${l.tipo === 'interno' ? '#007BFF' : '#28a745'};">(${l.tipo})</small></h4>
+                <span>Lote: ${escapeHtml(l.lote)} • Validade: ${formatDate(l.validade)} • ${l.createdAt}</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-secondary" style="padding: 6px 12px;" onclick="reprintLabel('${l.id}')">
+                    🖨️
+                </button>
+                <button class="btn btn-danger" style="padding: 6px 12px;" onclick="deleteLabel('${l.id}')">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteLabel(id) {
+    if (!confirm('Excluir esta etiqueta do histórico?')) return;
+    DataManager.deleteLabel(id);
+    loadHistory();
+    updateStats();
+}
+
+function reprintLabel(id) {
+    const label = DataManager.getLabels().find(l => l.id === id);
+    if (!label) return;
+    
+    document.getElementById('produto').value = label.produto;
+    document.getElementById('lote').value = label.lote;
+    document.getElementById('validade').value = label.validade;
+    document.getElementById('cor').value = label.cor;
+    document.getElementById('tipoControle').value = label.tipo;
+    document.getElementById('quantidade').value = '1';
+    
+    if (label.tipo === 'externo') {
+        document.getElementById('peso').value = label.peso || '';
+        document.getElementById('preco').value = label.preco || '';
+        document.getElementById('corPreco').value = label.corPreco || '#dc3545';
+        document.getElementById('empresa').value = label.empresa || '';
+        document.getElementById('cnpj').value = label.cnpj || '';
+        document.getElementById('ingredientes').value = label.ingredientes || '';
+        document.getElementById('fabricante').value = label.fabricante || '';
+    }
+    
+    toggleExternoFields();
+    showSection('labels');
+    gerarEtiquetas();
+}
+
+// ============================================
+// UI HELPERS
+// ============================================
+
+function showSection(section) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    
+    // Show selected
+    if (section === 'labels') {
+        document.getElementById('labelsSection').classList.remove('hidden');
+        document.querySelectorAll('.nav-tab')[0].classList.add('active');
+    } else if (section === 'history') {
+        document.getElementById('historySection').classList.remove('hidden');
+        document.querySelectorAll('.nav-tab')[1].classList.add('active');
+        loadHistory();
+    } else if (section === 'admin') {
+        document.getElementById('adminSection').classList.remove('hidden');
+        document.querySelectorAll('.nav-tab')[2].classList.add('active');
+        loadUsersList();
+    }
+}
+
+function updateStats() {
+    const labels = DataManager.getLabels();
+    document.getElementById('statTotal').textContent = labels.length;
+    document.getElementById('statInterno').textContent = labels.filter(l => l.tipo === 'interno').length;
+    document.getElementById('statExterno').textContent = labels.filter(l => l.tipo === 'externo').length;
+}
+
+function showMessage(element, message, type) {
+    element.className = 'alert alert-' + type;
+    element.textContent = message;
+    setTimeout(() => element.textContent = '', 5000);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// Initialize
+window.onload = init;
+</script>
+
+</body>
+</html>
