@@ -38,13 +38,56 @@ pool.connect((err, client, release) => {
 // ============================================
 app.post('/api/criar-pagamento', async (req, res) => {
     try {
-        const { cliente, email, telefone, cpf, metodo } = req.body;
+        console.log('=== NOVA REQUISIÇÃO /api/criar-pagamento ===');
+        console.log('Body recebido:', req.body);
+        
+        const { cliente, email, telefone, cpf, metodo, valor_entrada, parcelas_cartao } = req.body;
+        
+        if (!cliente || !email || !telefone || !cpf) {
+            console.log('ERRO: Campos obrigatórios faltando');
+            return res.status(400).json({
+                sucesso: false,
+                erro: 'Dados incompletos',
+                campos_recebidos: { cliente: !!cliente, email: !!email, telefone: !!telefone, cpf: !!cpf }
+            });
+        }
         
         // Definir valores conforme método de pagamento
         const isAvista = metodo === 'avista';
-        const valorTotal = isAvista ? 540000 : 600000; // R$ 5.400 (à vista) ou R$ 6.000 (parcelado)
-        const valorPix = isAvista ? 540000 : 300000;   // À vista: tudo no PIX | Parcelado: só entrada de R$ 3.000
-        const valorRestante = isAvista ? 0 : 300000;   // Valor para pagar no cartão
+        const valorTotal = isAvista ? 540000 : 600000; // Total: R$ 5.400 (à vista) ou R$ 6.000 (parcelado)
+        
+        // Para pagamento parcelado, usar valores escolhidos pelo cliente
+        let valorPix, valorRestante, numParcelas;
+        if (isAvista) {
+            valorPix = 540000;      // R$ 5.400 no PIX
+            valorRestante = 0;     // Sem restante
+            numParcelas = 0;
+        } else {
+            // Cliente escolhe a entrada (mínimo R$ 500, máximo R$ 5.000)
+            const entradaCliente = Math.max(50000, Math.min(500000, (valor_entrada || 3000) * 100));
+            valorPix = entradaCliente;
+            valorRestante = 600000 - entradaCliente; // R$ 6.000 - entrada
+            numParcelas = Math.max(1, Math.min(12, parcelas_cartao || 3));
+        }
+        
+        console.log('Configuração:', { 
+            isAvista, 
+            valorTotal, 
+            valorPix: valorPix / 100, 
+            valorRestante: valorRestante / 100,
+            parcelas: numParcelas,
+            metodo 
+        });
+        
+        // Verificar se token PagBank está configurado
+        if (!PAGBANK_TOKEN) {
+            console.log('ERRO: PAGBANK_TOKEN não configurado');
+            return res.status(500).json({
+                sucesso: false,
+                erro: 'Token PagBank não configurado'
+            });
+        }
+        console.log('Token PagBank OK');
         
         const pedido = {
             reference_id: `PEDIDO-${Date.now()}`,
@@ -78,12 +121,14 @@ app.post('/api/criar-pagamento', async (req, res) => {
                 payment_method: {
                     type: 'PIX',
                     pix: {
-                        expires_in: 86400 // 24 horas
+                        expires_in: 86400
                     }
                 }
             }]
         };
 
+        console.log('Enviando para PagBank...');
+        
         const response = await axios.post(
             `${PAGBANK_BASE_URL}/orders`,
             pedido,
@@ -94,6 +139,8 @@ app.post('/api/criar-pagamento', async (req, res) => {
                 }
             }
         );
+        
+        console.log('Resposta PagBank OK:', response.data.id);
 
         // Salvar pedido no banco de dados
         await salvarPedido({
@@ -107,6 +154,7 @@ app.post('/api/criar-pagamento', async (req, res) => {
             valor_total: valorTotal,
             valor_pix: valorPix,
             valor_restante: valorRestante,
+            parcelas_cartao: numParcelas,
             entrada_paga: false,
             cartao_pago: false,
             criado_em: new Date().toISOString(),
@@ -117,11 +165,18 @@ app.post('/api/criar-pagamento', async (req, res) => {
         console.log(`\n🛒 NOVO PEDIDO CRIADO!`);
         console.log(`   Cliente: ${cliente}`);
         console.log(`   Email: ${email}`);
-        console.log(`   Método: ${metodo === 'avista' ? 'À Vista (R$ 5.400,00)' : 'Entrada + Cartão (R$ 6.000,00)'}`);
+        if (metodo === 'avista') {
+            console.log(`   Método: À Vista (R$ 5.400,00)`);
+        } else {
+            console.log(`   Método: Entrada + Cartão`);
+            console.log(`   - Entrada PIX: R$ ${(valorPix / 100).toFixed(2)}`);
+            console.log(`   - Cartão: ${numParcelas}x de R$ ${((valorRestante / numParcelas) / 100).toFixed(2)}`);
+            console.log(`   - Total: R$ 6.000,00`);
+        }
         console.log(`   Notificar admin: ${ADMIN_EMAIL}`);
         console.log(`\n`);
 
-        res.json({
+        const resposta = {
             sucesso: true,
             pedido_id: response.data.id,
             metodo: metodo || 'avista',
@@ -131,14 +186,55 @@ app.post('/api/criar-pagamento', async (req, res) => {
             qr_code: response.data.charges?.[0]?.qr_code?.text || null,
             qr_code_url: response.data.charges?.[0]?.links?.find(l => l.rel === 'QRCode')?.href || null,
             pix_codigo: response.data.charges?.[0]?.qr_code?.text || null
-        });
+        };
+
+        // Adicionar info de parcelamento se for parcelado
+        if (!isAvista) {
+            resposta.parcelas_cartao = numParcelas;
+            resposta.valor_parcela = (valorRestante / numParcelas) / 100;
+        }
+
+        res.json(resposta);
 
     } catch (error) {
-        console.error('Erro ao criar pagamento:', error.response?.data || error.message);
+        console.error('=== ERRO NO /api/criar-pagamento ===');
+        console.error('Tipo:', error.name);
+        console.error('Mensagem:', error.message);
+        
+        if (error.response) {
+            console.error('Status HTTP:', error.response.status);
+            console.error('Dados erro PagBank:', error.response.data);
+        }
+        
+        if (error.code) {
+            console.error('Código erro:', error.code);
+        }
+        
+        console.error('Stack:', error.stack);
+        console.error('=====================================');
+        
+        // Retornar erro detalhado mas seguro
+        let mensagemErro = 'Erro ao criar pagamento';
+        
+        if (error.code === 'ECONNREFUSED') {
+            mensagemErro = 'Não foi possível conectar ao PagBank';
+        } else if (error.response?.status === 401) {
+            mensagemErro = 'Token PagBank inválido ou expirado';
+        } else if (error.response?.status === 400) {
+            mensagemErro = 'Dados inválidos enviados ao PagBank';
+        } else if (error.message?.includes('database') || error.message?.includes('postgres')) {
+            mensagemErro = 'Erro no banco de dados';
+        }
+        
         res.status(500).json({
             sucesso: false,
-            erro: 'Erro ao criar pagamento',
-            detalhes: error.response?.data || error.message
+            erro: mensagemErro,
+            debug: {
+                tipo: error.name,
+                mensagem: error.message,
+                pagbank_status: error.response?.status || null,
+                pagbank_erro: error.response?.data || null
+            }
         });
     }
 });
@@ -251,14 +347,15 @@ app.get('/api/pedidos', async (req, res) => {
 
 async function salvarPedido(pedido) {
     const query = `
-        INSERT INTO pedidos (id, cliente, email, cpf, telefone, status, metodo, valor_total, valor_pix, valor_restante, entrada_paga, cartao_pago, criado_em, dados_pagbank)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        INSERT INTO pedidos (id, cliente, email, cpf, telefone, status, metodo, valor_total, valor_pix, valor_restante, parcelas_cartao, entrada_paga, cartao_pago, criado_em, dados_pagbank)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             metodo = EXCLUDED.metodo,
             valor_total = EXCLUDED.valor_total,
             valor_pix = EXCLUDED.valor_pix,
             valor_restante = EXCLUDED.valor_restante,
+            parcelas_cartao = EXCLUDED.parcelas_cartao,
             entrada_paga = EXCLUDED.entrada_paga,
             cartao_pago = EXCLUDED.cartao_pago,
             atualizado_em = CURRENT_TIMESTAMP,
@@ -276,6 +373,7 @@ async function salvarPedido(pedido) {
         pedido.valor_total || (pedido.metodo === 'avista' ? 540000 : 600000),
         pedido.valor_pix || (pedido.metodo === 'avista' ? 540000 : 300000),
         pedido.valor_restante || (pedido.metodo === 'avista' ? 0 : 300000),
+        pedido.parcelas_cartao || 3,
         pedido.entrada_paga || false,
         pedido.cartao_pago || false,
         pedido.criado_em || new Date().toISOString(),

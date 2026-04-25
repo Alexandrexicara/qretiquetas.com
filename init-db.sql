@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     valor_restante INTEGER DEFAULT 0,              -- valor restante para cartão (centavos)
     entrada_paga BOOLEAN DEFAULT false,            -- entrada (PIX) foi paga?
     cartao_pago BOOLEAN DEFAULT false,             -- cartão foi pago?
+    parcelas_cartao INTEGER DEFAULT 3,             -- quantidade de parcelas no cartão
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     dados_pagbank JSONB DEFAULT '{}'
