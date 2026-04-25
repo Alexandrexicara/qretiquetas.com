@@ -1,5 +1,50 @@
 # Sistema de Pagamentos - Alimentares
 
+## Requisitos
+- Node.js 16+
+- PostgreSQL 12+
+
+## Configuração do Banco de Dados
+
+### 1. Criar banco PostgreSQL
+```bash
+# Acesse o psql
+psql -U postgres
+
+# Crie o banco
+CREATE DATABASE alimentares;
+
+# Saia
+\q
+```
+
+### 2. Criar tabelas
+```bash
+psql -U postgres -d alimentares -f database.sql
+```
+
+Ou dentro do psql:
+```bash
+psql -U postgres
+\c alimentares
+\i database.sql
+```
+
+### 3. Configurar .env
+Copie `.env.example` para `.env` e configure:
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo `.env` com suas credenciais do PostgreSQL:
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=alimentares
+DB_USER=postgres
+DB_PASSWORD=sua_senha
+```
+
 ## Como iniciar o servidor
 
 ### 1. Instalar dependências

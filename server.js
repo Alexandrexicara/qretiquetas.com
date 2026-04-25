@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
@@ -14,6 +15,25 @@ app.use(express.static('.')); // Serve arquivos estáticos
 // Configurações PagBank
 const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN;
 const PAGBANK_BASE_URL = 'https://api.pagbank.com';
+
+// Configuração PostgreSQL
+const pool = new Pool({
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'alimentares',
+    password: process.env.DB_PASSWORD || 'senha',
+    port: process.env.DB_PORT || 5432,
+});
+
+// Testar conexão
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Erro ao conectar no PostgreSQL:', err);
+    } else {
+        console.log('✅ PostgreSQL conectado com sucesso!');
+        release();
+    }
+});
 
 // ============================================
 // ENDPOINT: Criar pedido de pagamento
@@ -71,11 +91,13 @@ app.post('/api/criar-pagamento', async (req, res) => {
             }
         );
 
-        // Salvar pedido no arquivo
-        salvarPedido({
+        // Salvar pedido no banco de dados
+        await salvarPedido({
             id: response.data.id,
             cliente: cliente,
             email: email,
+            cpf: cpf,
+            telefone: telefone,
             status: 'PENDING',
             criado_em: new Date().toISOString(),
             dados_pagbank: response.data
@@ -102,14 +124,14 @@ app.post('/api/criar-pagamento', async (req, res) => {
 // ============================================
 // ENDPOINT: Webhook - Receber confirmação PagBank
 // ============================================
-app.post('/api/webhook/pagbank', (req, res) => {
+app.post('/api/webhook/pagbank', async (req, res) => {
     try {
         const { id, status, reference_id } = req.body;
         
         console.log('Webhook recebido:', req.body);
 
-        // Buscar pedido
-        const pedido = buscarPedido(id);
+        // Buscar pedido no banco
+        const pedido = await buscarPedido(id);
         
         if (pedido) {
             // Atualizar status
@@ -117,11 +139,11 @@ app.post('/api/webhook/pagbank', (req, res) => {
             pedido.atualizado_em = new Date().toISOString();
             pedido.webhook_data = req.body;
             
-            salvarPedido(pedido);
+            await salvarPedido(pedido);
 
             // Se pagamento confirmado, liberar acesso
             if (status === 'PAID' || status === 'paid') {
-                liberarAcessoCliente(pedido);
+                await liberarAcessoCliente(pedido);
             }
         }
 
@@ -135,8 +157,8 @@ app.post('/api/webhook/pagbank', (req, res) => {
 // ============================================
 // ENDPOINT: Consultar status do pedido
 // ============================================
-app.get('/api/pedido/:id', (req, res) => {
-    const pedido = buscarPedido(req.params.id);
+app.get('/api/pedido/:id', async (req, res) => {
+    const pedido = await buscarPedido(req.params.id);
     
     if (!pedido) {
         return res.status(404).json({ erro: 'Pedido não encontrado' });
@@ -154,8 +176,8 @@ app.get('/api/pedido/:id', (req, res) => {
 // ============================================
 // ENDPOINT: Listar todos os pedidos (admin)
 // ============================================
-app.get('/api/pedidos', (req, res) => {
-    const pedidos = listarPedidos();
+app.get('/api/pedidos', async (req, res) => {
+    const pedidos = await listarPedidos();
     res.json(pedidos);
 });
 
@@ -163,65 +185,76 @@ app.get('/api/pedidos', (req, res) => {
 // FUNÇÕES AUXILIARES
 // ============================================
 
-const fs = require('fs');
-const path = require('path');
-const PEDIDOS_FILE = path.join(__dirname, 'dados', 'pedidos.json');
+// ============================================
+// FUNÇÕES DE BANCO DE DADOS - POSTGRESQL
+// ============================================
 
-function salvarPedido(pedido) {
-    let pedidos = [];
+async function salvarPedido(pedido) {
+    const query = `
+        INSERT INTO pedidos (id, cliente, email, cpf, telefone, status, valor, criado_em, dados_pagbank)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO UPDATE SET
+            status = EXCLUDED.status,
+            atualizado_em = CURRENT_TIMESTAMP,
+            dados_pagbank = EXCLUDED.dados_pagbank
+    `;
     
-    if (fs.existsSync(PEDIDOS_FILE)) {
-        pedidos = JSON.parse(fs.readFileSync(PEDIDOS_FILE, 'utf8'));
-    }
+    const values = [
+        pedido.id,
+        pedido.cliente,
+        pedido.email,
+        pedido.cpf || '',
+        pedido.telefone || '',
+        pedido.status || 'PENDING',
+        600000,
+        pedido.criado_em || new Date().toISOString(),
+        JSON.stringify(pedido.dados_pagbank || {})
+    ];
     
-    // Atualizar ou adicionar
-    const index = pedidos.findIndex(p => p.id === pedido.id);
-    if (index >= 0) {
-        pedidos[index] = pedido;
-    } else {
-        pedidos.push(pedido);
-    }
-    
-    fs.writeFileSync(PEDIDOS_FILE, JSON.stringify(pedidos, null, 2));
+    await pool.query(query, values);
 }
 
-function buscarPedido(id) {
-    if (!fs.existsSync(PEDIDOS_FILE)) return null;
-    
-    const pedidos = JSON.parse(fs.readFileSync(PEDIDOS_FILE, 'utf8'));
-    return pedidos.find(p => p.id === id) || null;
+async function buscarPedido(id) {
+    const query = 'SELECT * FROM pedidos WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    return result.rows[0] || null;
 }
 
-function listarPedidos() {
-    if (!fs.existsSync(PEDIDOS_FILE)) return [];
-    return JSON.parse(fs.readFileSync(PEDIDOS_FILE, 'utf8'));
+async function listarPedidos() {
+    const query = 'SELECT * FROM pedidos ORDER BY criado_em DESC';
+    const result = await pool.query(query);
+    return result.rows;
 }
 
-function liberarAcessoCliente(pedido) {
-    // Criar usuário no sistema
-    const usuario = {
-        id: Date.now(),
-        nome: pedido.cliente,
-        email: pedido.email,
-        tipo: 'cliente',
-        ativo: true,
-        pedido_id: pedido.id,
-        liberado_em: new Date().toISOString()
-    };
+async function liberarAcessoCliente(pedido) {
+    const senhaTemp = Math.random().toString(36).substring(2, 8);
     
-    // Salvar usuário
-    const usuariosFile = path.join(__dirname, 'dados', 'usuarios_pagamento.json');
-    let usuarios = [];
-    if (fs.existsSync(usuariosFile)) {
-        usuarios = JSON.parse(fs.readFileSync(usuariosFile, 'utf8'));
-    }
-    usuarios.push(usuario);
-    fs.writeFileSync(usuariosFile, JSON.stringify(usuarios, null, 2));
+    const query = `
+        INSERT INTO usuarios (nome, email, senha, tipo, ativo, pedido_id, liberado_em)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (email) DO UPDATE SET
+            ativo = EXCLUDED.ativo,
+            liberado_em = EXCLUDED.liberado_em,
+            pedido_id = EXCLUDED.pedido_id
+    `;
     
-    console.log(`Acesso liberado para: ${pedido.cliente} (${pedido.email})`);
+    const values = [
+        pedido.cliente,
+        pedido.email,
+        senhaTemp,
+        'cliente',
+        true,
+        pedido.id,
+        new Date().toISOString()
+    ];
     
-    // Aqui você pode enviar e-mail de confirmação
-    // enviarEmailConfirmacao(pedido.email, usuario);
+    await pool.query(query, values);
+    
+    console.log(`✅ Acesso liberado para: ${pedido.cliente} (${pedido.email})`);
+    console.log(`🔑 Senha temporária: ${senhaTemp}`);
+    
+    // TODO: Enviar e-mail com dados de acesso
+    // enviarEmailConfirmacao(pedido.email, pedido.cliente, senhaTemp);
 }
 
 // Iniciar servidor
