@@ -9,13 +9,9 @@ CREATE TABLE IF NOT EXISTS pedidos (
     telefone VARCHAR(20),
     status VARCHAR(50) DEFAULT 'PENDING',
     metodo VARCHAR(20) DEFAULT 'avista',           -- 'avista' ou 'parcelado'
-    valor INTEGER DEFAULT 600000,                  -- mantido para compatibilidade
     valor_total INTEGER DEFAULT 600000,            -- valor total do pedido (centavos)
-    valor_pix INTEGER DEFAULT 540000,              -- valor da entrada/PIX (centavos)
-    valor_restante INTEGER DEFAULT 0,              -- valor restante para cartão (centavos)
-    entrada_paga BOOLEAN DEFAULT false,            -- entrada (PIX) foi paga?
+    entrada_paga BOOLEAN DEFAULT false,            -- entrada foi paga?
     cartao_pago BOOLEAN DEFAULT false,             -- cartão foi pago?
-    parcelas_cartao INTEGER DEFAULT 3,             -- quantidade de parcelas no cartão
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     dados_pagbank JSONB DEFAULT '{}'
