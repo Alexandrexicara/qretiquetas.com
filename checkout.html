@@ -551,26 +551,23 @@
 
                 if (result.sucesso) {
                     pedidoIdAtual = result.pedido_id;
-                    loading.classList.remove('active');
-                    document.getElementById('pix-container').classList.add('active');
                     
-                    // Mostrar QR code
-                    if (result.qr_code_url) {
+                    // REDIRECIONAR para o PagBank ao invés de mostrar na página
+                    if (result.link_pagamento) {
+                        console.log('Redirecionando para PagBank:', result.link_pagamento);
+                        window.location.href = result.link_pagamento;
+                    } else if (result.qr_code_url) {
+                        // Fallback: mostrar QR code se não tiver link
+                        loading.classList.remove('active');
+                        document.getElementById('pix-container').classList.add('active');
                         document.getElementById('qr-code-img').src = result.qr_code_url;
+                        if (result.pix_codigo) {
+                            document.getElementById('pix-code').textContent = result.pix_codigo;
+                        }
+                        iniciarVerificacaoStatus(result.pedido_id, metodoPagamento);
+                    } else {
+                        throw new Error('Link de pagamento não recebido');
                     }
-                    
-                    // Mostrar código PIX
-                    if (result.pix_codigo) {
-                        document.getElementById('pix-code').textContent = result.pix_codigo;
-                    }
-
-                    // Atualizar mensagem conforme método
-                    if (metodoPagamento === 'parcelado') {
-                        document.getElementById('success-message').textContent = 'Entrada confirmada! Complete o pagamento do cartão para liberar o acesso.';
-                    }
-
-                    // Iniciar polling para verificar status
-                    iniciarVerificacaoStatus(result.pedido_id, metodoPagamento);
                 } else {
                     throw new Error(result.erro || 'Erro ao criar pagamento');
                 }

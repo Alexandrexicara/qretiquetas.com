@@ -89,6 +89,8 @@ app.post('/api/criar-pagamento', async (req, res) => {
         }
         console.log('Token PagBank OK');
         
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        
         const pedido = {
             reference_id: `PEDIDO-${Date.now()}`,
             customer: {
@@ -109,8 +111,13 @@ app.post('/api/criar-pagamento', async (req, res) => {
                 unit_amount: valorTotal
             }],
             notification_urls: [
-                `${req.protocol}://${req.get('host')}/api/webhook/pagbank`
+                `${baseUrl}/api/webhook/pagbank`
             ],
+            redirect_urls: {
+                success: `${baseUrl}/pagamento-retorno.html?status=sucesso&pedido_id=PEDIDO_ID`,
+                failure: `${baseUrl}/pagamento-retorno.html?status=erro&pedido_id=PEDIDO_ID`,
+                pending: `${baseUrl}/pagamento-retorno.html?status=pendente&pedido_id=PEDIDO_ID`
+            },
             charges: [{
                 reference_id: `COBRANCA-${Date.now()}`,
                 description: isAvista ? 'Pagamento Sistema Alimentares - À Vista' : 'Pagamento Sistema Alimentares - Entrada',
@@ -176,6 +183,13 @@ app.post('/api/criar-pagamento', async (req, res) => {
         console.log(`   Notificar admin: ${ADMIN_EMAIL}`);
         console.log(`\n`);
 
+        // Buscar link de pagamento do PagBank
+        const linkPagamento = response.data.links?.find(l => l.rel === 'checkout' || l.rel === 'pay')?.href 
+            || response.data.charges?.[0]?.links?.find(l => l.rel === 'checkout' || l.rel === 'pay')?.href
+            || null;
+        
+        const qrCodeUrl = response.data.charges?.[0]?.links?.find(l => l.rel === 'QRCode')?.href || null;
+
         const resposta = {
             sucesso: true,
             pedido_id: response.data.id,
@@ -183,8 +197,8 @@ app.post('/api/criar-pagamento', async (req, res) => {
             valor_total: valorTotal / 100,
             valor_pix: valorPix / 100,
             valor_restante: valorRestante / 100,
-            qr_code: response.data.charges?.[0]?.qr_code?.text || null,
-            qr_code_url: response.data.charges?.[0]?.links?.find(l => l.rel === 'QRCode')?.href || null,
+            link_pagamento: linkPagamento,  // Link para redirecionar cliente
+            qr_code_url: qrCodeUrl,         // Fallback QR code
             pix_codigo: response.data.charges?.[0]?.qr_code?.text || null
         };
 

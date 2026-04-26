@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status do Pagamento - qrstiquetas.com</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .icon.success { color: #28a745; }
+        .icon.pending { color: #ffc107; }
+        .icon.error { color: #dc3545; }
+        h1 { font-size: 28px; margin-bottom: 15px; color: #333; }
+        p { color: #666; margin-bottom: 25px; line-height: 1.6; }
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+        .btn:hover { transform: translateY(-3px); }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .info-box p { margin: 5px 0; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="container-verificando">
+        <div class="spinner"></div>
+        <h1>Verificando Pagamento...</h1>
+        <p>Aguarde enquanto confirmamos seu pagamento com o PagBank.</p>
+    </div>
+
+    <div class="container" id="container-sucesso" style="display: none;">
+        <i class="fas fa-check-circle icon success"></i>
+        <h1>Pagamento Confirmado!</h1>
+        <p>Seu pagamento foi processado com sucesso. Seu acesso ao sistema foi liberado!</p>
+        <div class="info-box">
+            <p><strong>Pedido:</strong> <span id="pedido-id"></span></p>
+            <p><strong>Email:</strong> <span id="email-cliente"></span></p>
+        </div>
+        <a href="cadastro.html" class="btn">Acessar Sistema</a>
+    </div>
+
+    <div class="container" id="container-pendente" style="display: none;">
+        <i class="fas fa-clock icon pending"></i>
+        <h1>Pagamento em Processamento</h1>
+        <p>Seu pagamento está sendo processado pelo PagBank. Isso pode levar alguns minutos.</p>
+        <div class="info-box">
+            <p><strong>Pedido:</strong> <span id="pedido-pendente-id"></span></p>
+        </div>
+        <p style="font-size: 13px; color: #999;">Você receberá um email quando for confirmado.</p>
+        <a href="index.html" class="btn">Voltar ao Início</a>
+    </div>
+
+    <div class="container" id="container-erro" style="display: none;">
+        <i class="fas fa-times-circle icon error"></i>
+        <h1>Erro no Pagamento</h1>
+        <p>Houve um problema ao processar seu pagamento. Por favor, tente novamente.</p>
+        <a href="checkout.html" class="btn">Tentar Novamente</a>
+    </div>
+
+    <script>
+        // Pegar ID do pedido da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const pedidoId = urlParams.get('pedido_id') || urlParams.get('order_id') || urlParams.get('id');
+        
+        if (pedidoId) {
+            console.log('Verificando pedido:', pedidoId);
+            verificarStatus(pedidoId);
+        } else {
+            document.getElementById('container-verificando').style.display = 'none';
+            document.getElementById('container-erro').style.display = 'block';
+        }
+
+        async function verificarStatus(pedidoId) {
+            try {
+                const response = await fetch(`/api/pedido/${pedidoId}`);
+                const pedido = await response.json();
+                
+                console.log('Status do pedido:', pedido);
+                
+                document.getElementById('container-verificando').style.display = 'none';
+                
+                if (pedido.status === 'PAID' || pedido.status === 'paid' || pedido.status === 'COMPLETO') {
+                    // Pagamento confirmado
+                    document.getElementById('container-sucesso').style.display = 'block';
+                    document.getElementById('pedido-id').textContent = pedido.id;
+                    document.getElementById('email-cliente').textContent = pedido.email;
+                } else if (pedido.status === 'ENTRADA_PAID') {
+                    // Entrada paga, aguardando cartão
+                    document.getElementById('container-pendente').style.display = 'block';
+                    document.getElementById('pedido-pendente-id').textContent = pedido.id;
+                    document.querySelector('#container-pendente h1').textContent = 'Entrada Confirmada!';
+                    document.querySelector('#container-pendente p').textContent = 'Sua entrada foi paga. Agora complete o pagamento do cartão.';
+                } else {
+                    // Pendente
+                    document.getElementById('container-pendente').style.display = 'block';
+                    document.getElementById('pedido-pendente-id').textContent = pedido.id;
+                }
+                
+            } catch (error) {
+                console.error('Erro ao verificar:', error);
+                document.getElementById('container-verificando').style.display = 'none';
+                document.getElementById('container-erro').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
