@@ -31,6 +31,9 @@
         .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .btn-secondary { background: transparent; color: white; border: 2px solid white; }
         .btn-secondary:hover { background: white; color: #667eea; }
+        .btn-trial { background: linear-gradient(135deg, #28a745, #20c997); color: white; box-shadow: 0 6px 20px rgba(40,167,69,0.5); animation: trialBlink 2s ease-in-out infinite; }
+        .btn-trial:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 12px 30px rgba(40,167,69,0.6); }
+        @keyframes trialBlink { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
         .price-section { background: #fff; padding: 80px 20px; text-align: center; }
         .price-card { max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 50px; color: white; box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3); }
         .price-label { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; margin-bottom: 10px; }
@@ -94,6 +97,9 @@
         <div class="header-content">
             <img src="img/logo.png" alt="Logo" class="header-logo">
             <h1 class="header-title">qrstiquetas.com</h1>
+            <a href="cadastro.html" class="btn btn-trial" style="padding:10px 22px;font-size:14px;margin-left:auto;">
+                <i class="fas fa-rocket"></i> Testar 7 min Grátis
+            </a>
         </div>
     </header>
 
@@ -103,9 +109,13 @@
             <h1>Alimentares</h1>
             <p>Sistema completo de geração de etiquetas com QR Code para controle de estoque e produtos comerciais. Simples, rápido e profissional.</p>
             <div class="hero-buttons">
+                <a href="cadastro.html" class="btn btn-trial"><i class="fas fa-gift"></i> Cadastrar e Testar Grátis</a>
                 <a href="#como-usar" class="btn btn-primary"><i class="fas fa-play-circle"></i> Como Usar</a>
                 <a href="#preco" class="btn btn-secondary"><i class="fas fa-tag"></i> Ver Preço</a>
             </div>
+            <p style="margin-top:25px;font-size:15px;opacity:0.95;">
+                <i class="fas fa-clock"></i> <strong>7 minutos grátis</strong> para conhecer o sistema antes de comprar
+            </p>
         </div>
     </section>
 
@@ -115,6 +125,9 @@
             <div class="price-value"><span>R$</span>6.000,00</div>
             <p>Acesso vitalício ao sistema completo</p>
             <div class="price-note"><i class="fas fa-check-circle"></i> Após a confirmação do pagamento, o cliente recebe acesso imediato para utilizar o sistema</div>
+            <a href="cadastro.html" class="btn btn-trial" style="margin-top:25px;">
+                <i class="fas fa-gift"></i> Testar Grátis por 7 Minutos
+            </a>
         </div>
     </section>
 
@@ -272,7 +285,10 @@
         <h2>Pronto para Organizar suas Etiquetas?</h2>
         <p>Adquira agora o sistema Alimentares e tenha controle total dos seus produtos com etiquetas profissionais.</p>
         <div class="cta-price">R$ 6.000,00</div>
-        <a href="checkout.html" class="cta-btn"><i class="fas fa-shopping-cart"></i> Quero Comprar Agora</a>
+        <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
+            <a href="cadastro.html" class="cta-btn" style="background:linear-gradient(135deg,#28a745,#20c997);color:#fff;"><i class="fas fa-gift"></i> Testar 7 min Grátis</a>
+            <a href="checkout.html" class="cta-btn"><i class="fas fa-shopping-cart"></i> Quero Comprar Agora</a>
+        </div>
         <p style="margin-top: 20px; font-size: 14px; opacity: 0.8;"><i class="fas fa-info-circle"></i> Após a confirmação do pagamento, você receberá o acesso liberado para usar o sistema imediatamente.</p>
     </section>
 
