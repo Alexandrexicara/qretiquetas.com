@@ -9,7 +9,20 @@
 - [checkout.html](file://checkout.html)
 - [pagamento-retorno.html](file://pagamento-retorno.html)
 - [PAGAMENTO-README.md](file://PAGAMENTO-README.md)
+- [admin.html](file://admin.html)
+- [admin-login.html](file://admin-login.html)
+- [pedido-status.html](file://pedido-status.html)
+- [migration-manual.sql](file://migration-manual.sql)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for new administrative API endpoints
+- Documented manual payment processing system with complete flow
+- Added admin panel endpoints: /api/admin/login, /api/admin/logout, /api/admin/pedidos
+- Documented all manual payment flow endpoints including confirmation and card link management
+- Updated API reference summary with new endpoints
+- Enhanced error handling documentation for admin operations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,7 +37,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides comprehensive API documentation for the backend payment system. It covers all HTTP endpoints, request/response schemas, authentication requirements, error handling, and integration patterns for frontend consumption. The system integrates with PagBank for payment processing and manages order lifecycle, including webhook notifications and access provisioning.
+This document provides comprehensive API documentation for the backend payment system. It covers all HTTP endpoints, request/response schemas, authentication requirements, error handling, and integration patterns for frontend consumption. The system integrates with PagBank for payment processing and manages order lifecycle, including webhook notifications and access provisioning. The system now includes a complete administrative interface for managing manual payment flows and order processing.
 
 ## Project Structure
 The backend is implemented as a Node.js/Express server with PostgreSQL persistence. Key components:
@@ -32,19 +45,24 @@ The backend is implemented as a Node.js/Express server with PostgreSQL persisten
 - Payment orchestration via PagBank API
 - Order lifecycle management with database persistence
 - Admin panel with session-based authentication
-- Frontend pages for checkout and payment status
+- Manual payment flow system for custom payment arrangements
+- Frontend pages for checkout, payment status, and admin management
 
 ```mermaid
 graph TB
-Client["Browser Client<br/>checkout.html / pagamento-retorno.html"] --> API["Express Server<br/>server.js"]
+Client["Browser Client<br/>checkout.html / pagamento-retorno.html / admin.html"] --> API["Express Server<br/>server.js"]
 API --> PG["PostgreSQL<br/>pedidos, usuarios"]
 API --> PB["PagBank API"]
 API --> FS["File Uploads<br/>/uploads/comprovantes"]
+AdminPanel["Admin Panel<br/>admin.html"] --> API
+ManualFlow["Manual Payment Flow<br/>pedido-status.html"] --> API
 ```
 
 **Diagram sources**
 - [server.js:12-27](file://server.js#L12-L27)
 - [database.sql:13-36](file://database.sql#L13-L36)
+- [admin.html:137-150](file://admin.html#L137-L150)
+- [pedido-status.html:316-322](file://pedido-status.html#L316-L322)
 
 **Section sources**
 - [server.js:12-27](file://server.js#L12-L27)
@@ -58,6 +76,7 @@ API --> FS["File Uploads<br/>/uploads/comprovantes"]
 - Order status and listing endpoints
 - Admin authentication and order management
 - Manual payment flow (PIX + Card) with upload support
+- Complete administrative API for order management
 
 **Section sources**
 - [server.js:82-280](file://server.js#L82-L280)
@@ -65,9 +84,10 @@ API --> FS["File Uploads<br/>/uploads/comprovantes"]
 - [server.js:388-487](file://server.js#L388-L487)
 - [server.js:539-671](file://server.js#L539-L671)
 - [server.js:703-736](file://server.js#L703-L736)
+- [server.js:736-890](file://server.js#L736-L890)
 
 ## Architecture Overview
-The system follows a request-response model with asynchronous payment processing. Payments are initiated via PagBank, with webhook callbacks updating order status and triggering access provisioning.
+The system follows a request-response model with asynchronous payment processing. Payments are initiated via PagBank, with webhook callbacks updating order status and triggering access provisioning. The system now supports both automated PagBank processing and manual payment flows managed through an administrative interface.
 
 ```mermaid
 sequenceDiagram
@@ -86,11 +106,26 @@ PB-->>W : POST /api/webhook/pagbank
 W->>DB : Update order status
 W-->>PB : 200 OK
 W->>DB : Provision access if paid
+participant M as "Manual Client"
+participant A as "Admin Panel"
+M->>S : POST /api/manual/criar-pedido
+S->>DB : Save manual order
+M->>S : POST /api/manual/upload-comprovante/ : token
+S->>DB : Update manual order status
+A->>S : POST /api/admin/pedido/ : id/confirmar-pix
+S->>DB : Update manual order status
+A->>S : POST /api/admin/pedido/ : id/enviar-link-cartao
+S->>DB : Update manual order status
+A->>S : POST /api/admin/pedido/ : id/confirmar-pagamento
+S->>DB : Update manual order status
+S->>DB : Provision access
 ```
 
 **Diagram sources**
 - [server.js:82-280](file://server.js#L82-L280)
 - [server.js:285-345](file://server.js#L285-L345)
+- [server.js:539-671](file://server.js#L539-L671)
+- [server.js:736-890](file://server.js#L736-L890)
 - [database.sql:13-36](file://database.sql#L13-L36)
 
 ## Detailed Component Analysis
@@ -99,6 +134,7 @@ W->>DB : Provision access if paid
 - Admin authentication uses signed cookies with HMAC-SHA256 and expiration
 - Session cookie is HttpOnly, SameSite lax, and Secure in production
 - No global rate limiting is implemented in the current code
+- Admin endpoints are protected by requireAdmin middleware
 
 ```mermaid
 flowchart TD
@@ -110,11 +146,11 @@ SetCookie --> Success["Return 200 OK"]
 ```
 
 **Diagram sources**
-- [server.js:713-730](file://server.js#L713-L730)
-- [server.js:703-710](file://server.js#L703-L710)
+- [server.js:737-754](file://server.js#L737-L754)
+- [server.js:727-734](file://server.js#L727-L734)
 
 **Section sources**
-- [server.js:703-730](file://server.js#L703-L730)
+- [server.js:727-754](file://server.js#L727-L754)
 
 ### Payment Creation: POST /api/criar-pagamento
 Creates a PagBank order and returns payment links or QR code.
@@ -209,30 +245,46 @@ Error handling:
 ### Manual Payment Flow
 Supports manual PIX + Card payments with admin-managed card link.
 
-Endpoints:
-- POST /api/manual/criar-pedido
-- POST /api/manual/upload-comprovante/:token
-- GET /api/manual/pedido/:token
+#### Manual Payment Endpoints
+- POST /api/manual/criar-pedido: Creates a manual order with custom payment split
+- POST /api/manual/upload-comprovante/:token: Uploads PIX payment proof
+- GET /api/manual/pedido/:token: Retrieves sanitized order details for client
 
-Key behaviors:
-- Validates total equals R$ 6.000.00 (600000 cents)
-- Generates unique token for client access
-- Uploads PIX proof of payment
-- Sanitizes sensitive data in public responses
+#### Manual Payment Process
+1. Client creates manual order with desired PIX/cartão split
+2. Client receives unique token for order access
+3. Client pays PIX to provided key and uploads proof
+4. Admin confirms PIX payment and sends card payment link
+5. Client completes card payment
+6. Admin confirms full payment and grants access
 
 **Section sources**
 - [server.js:539-671](file://server.js#L539-L671)
 
-### Admin Panel
-- POST /api/admin/login: creates admin session cookie
-- POST /api/admin/logout: clears admin cookie
-- GET /api/admin/pedidos: lists orders with optional status filter
-- POST /api/admin/pedido/:id/confirmar-pix: confirms PIX payment for manual orders
+### Admin Panel Management
+Complete administrative interface for managing orders and payment flows.
+
+#### Admin Authentication
+- POST /api/admin/login: Creates admin session cookie with expiration
+- POST /api/admin/logout: Clears admin cookie
+
+#### Order Management
+- GET /api/admin/pedidos: Lists orders with optional status filtering
+- POST /api/admin/pedido/:id/confirmar-pix: Confirms PIX payment for manual orders
+- POST /api/admin/pedido/:id/enviar-link-cartao: Sends card payment link to client
+- POST /api/admin/pedido/:id/confirmar-pagamento: Confirms full payment and grants access
+- POST /api/admin/pedido/:id/cancelar: Cancels an order
+
+#### Admin Interface Features
+- Real-time order status monitoring
+- Status filtering (todos, pending, pix, cartao, paid, cancel)
+- Action buttons for each order management operation
+- Automatic refresh every 30 seconds
 
 **Section sources**
-- [server.js:713-736](file://server.js#L713-L736)
-- [server.js:739-778](file://server.js#L739-L778)
-- [server.js:780-799](file://server.js#L780-L799)
+- [server.js:736-890](file://server.js#L736-L890)
+- [admin.html:137-150](file://admin.html#L137-L150)
+- [admin.html:252-272](file://admin.html#L252-L272)
 
 ## Dependency Analysis
 External dependencies and integrations:
@@ -264,6 +316,7 @@ Express --> Cors["cors"]
 - Webhook processing updates orders asynchronously
 - No built-in rate limiting; consider adding middleware for production deployments
 - File uploads limited to 5MB with MIME type validation
+- Admin endpoints include pagination with limit of 500 orders
 
 **Section sources**
 - [database.sql:39-43](file://database.sql#L39-L43)
@@ -276,20 +329,24 @@ Common issues and resolutions:
 - Missing required fields in payment creation: returns 400 with field presence info
 - Database connection errors: surfaced as 500 with debug info
 - Webhook failures: server logs error and responds 500
+- Admin authentication failures: returns 401 with "Não autenticado"
+- Manual payment token not found: returns 404 with "Pedido não encontrado"
 
 Debugging tips:
 - Enable logging in development mode
 - Verify webhook URL in PagBank dashboard
 - Check database connectivity and table existence
 - Validate environment variables (PAGBANK_TOKEN, DATABASE_URL)
+- Ensure admin credentials match ADMIN_USUARIO and ADMIN_SENHA
 
 **Section sources**
 - [server.js:239-279](file://server.js#L239-L279)
 - [server.js:285-345](file://server.js#L285-L345)
+- [server.js:727-734](file://server.js#L727-L734)
 - [PAGAMENTO-README.md:89-97](file://PAGAMENTO-README.md#L89-L97)
 
 ## Conclusion
-The backend provides a robust payment processing pipeline integrated with PagBank, supporting both immediate and staged payment flows. It includes comprehensive order management, admin controls, and frontend integration points. For production, consider adding rate limiting, input sanitization, and monitoring.
+The backend provides a robust payment processing pipeline integrated with PagBank, supporting both immediate and staged payment flows. It includes comprehensive order management, admin controls, and frontend integration points. The addition of manual payment processing and complete administrative interface enhances flexibility for custom payment arrangements. For production, consider adding rate limiting, input sanitization, and monitoring.
 
 ## Appendices
 
@@ -353,9 +410,32 @@ PEDIDOS ||--o{ USUARIOS : "referenced by pedido_id"
 - POST /api/admin/logout: Admin logout
 - GET /api/admin/pedidos: Admin order listing
 - POST /api/admin/pedido/:id/confirmar-pix: Confirm PIX for manual orders
+- POST /api/admin/pedido/:id/enviar-link-cartao: Send card payment link
+- POST /api/admin/pedido/:id/confirmar-pagamento: Confirm full payment
+- POST /api/admin/pedido/:id/cancelar: Cancel order
 
 **Section sources**
 - [server.js:82-280](file://server.js#L82-L280)
 - [server.js:285-378](file://server.js#L285-L378)
 - [server.js:539-671](file://server.js#L539-L671)
-- [server.js:703-799](file://server.js#L703-L799)
+- [server.js:736-890](file://server.js#L736-L890)
+
+### Manual Payment Status Flow
+Complete status progression for manual payment orders:
+
+```mermaid
+stateDiagram-v2
+[*] --> PENDING_PIX : Client creates order
+PENDING_PIX --> PIX_ENVIADO : Client uploads PIX proof
+PIX_ENVIADO --> PIX_CONFIRMADO_AGUARDA_CARTAO : Admin confirms PIX
+PIX_CONFIRMADO_AGUARDA_CARTAO --> LINK_CARTAO_ENVIADO : Admin sends card link
+LINK_CARTAO_ENVIADO --> PAID : Client pays card + Admin confirms
+PAID --> [*] : Access granted
+PENDING_PIX --> CANCELADO : Admin cancels
+PIX_ENVIADO --> CANCELADO : Admin cancels
+PIX_CONFIRMADO_AGUARDA_CARTAO --> CANCELADO : Admin cancels
+LINK_CARTAO_ENVIADO --> CANCELADO : Admin cancels
+```
+
+**Diagram sources**
+- [migration-manual.sql:30-38](file://migration-manual.sql#L30-L38)

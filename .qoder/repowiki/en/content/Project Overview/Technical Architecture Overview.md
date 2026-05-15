@@ -8,11 +8,23 @@
 - [checkout.html](file://checkout.html)
 - [cadastro.html](file://cadastro.html)
 - [pagamento-retorno.html](file://pagamento-retorno.html)
+- [admin.html](file://admin.html)
+- [admin-login.html](file://admin-login.html)
+- [pedido-status.html](file://pedido-status.html)
 - [README.md](file://README.md)
 - [PAGAMENTO-README.md](file://PAGAMENTO-README.md)
 - [database.sql](file://database.sql)
 - [init-db.sql](file://init-db.sql)
+- [migration-manual.sql](file://migration-manual.sql)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for the dual payment processing architecture
+- Documented the new administrative panel system with real-time order monitoring
+- Updated payment flow orchestration to support both PagBank integration and manual payment handling
+- Enhanced database schema documentation with manual payment flow support
+- Added administrative endpoints and real-time monitoring capabilities
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -20,24 +32,26 @@
 3. [Hybrid Architecture Design](#hybrid-architecture-design)
 4. [Frontend Architecture](#frontend-architecture)
 5. [Backend Architecture](#backend-architecture)
-6. [Data Flow Patterns](#data-flow-patterns)
-7. [Security Model](#security-model)
-8. [Browser Compatibility](#browser-compatibility)
-9. [Integration Points](#integration-points)
-10. [Offline Operation](#offline-operation)
-11. [Performance Considerations](#performance-considerations)
-12. [Troubleshooting Guide](#troubleshooting-guide)
-13. [Conclusion](#conclusion)
+6. [Dual Payment Processing System](#dual-payment-processing-system)
+7. [Administrative Panel System](#administrative-panel-system)
+8. [Data Flow Patterns](#data-flow-patterns)
+9. [Security Model](#security-model)
+10. [Browser Compatibility](#browser-compatibility)
+11. [Integration Points](#integration-points)
+12. [Offline Operation](#offline-operation)
+13. [Performance Considerations](#performance-considerations)
+14. [Troubleshooting Guide](#troubleshooting-guide)
+15. [Conclusion](#conclusion)
 
 ## Introduction
 
-The qretiquetas.com system is a hybrid architecture solution designed for the Alimentares/Kali point-of-sale environment, combining a pure frontend labeling system with a Node.js/Express backend payment processing system. This architecture enables offline operation after initial load while maintaining robust payment processing capabilities through external payment providers.
+The qretiquetas.com system is a sophisticated hybrid architecture solution designed for the Alimentares/Kali point-of-sale environment, combining a pure frontend labeling system with a Node.js/Express backend payment processing system. This architecture enables offline operation after initial load while maintaining robust dual payment processing capabilities through both automated PagBank integration and manual payment handling.
 
-The system serves two distinct but integrated domains: the labeling system (purely frontend) and the payment system (backend API), each with specific responsibilities and security considerations tailored for the retail POS environment.
+The system serves two distinct but integrated domains: the labeling system (purely frontend) and the payment system (backend API), each with specific responsibilities and security considerations tailored for the retail POS environment. The recent enhancement introduces a comprehensive administrative panel system with real-time order monitoring capabilities, enabling seamless management of both automated and manual payment flows.
 
 ## System Architecture Overview
 
-The system follows a hybrid architecture pattern that separates concerns between labeling functionality and payment processing:
+The system follows a hybrid architecture pattern that separates concerns between labeling functionality and dual payment processing systems:
 
 ```mermaid
 graph TB
@@ -46,49 +60,64 @@ A[index.html - Landing Page]
 B[cadastro.html - Labeling System]
 C[checkout.html - Payment Interface]
 D[pagamento-retorno.html - Payment Status]
+E[admin.html - Admin Panel]
+F[admin-login.html - Admin Authentication]
+G[pedido-status.html - Customer Order Status]
 end
 subgraph "CDN Dependencies"
-E[QRious Library CDN]
-F[Font Awesome CDN]
-G[Google Fonts CDN]
+H[QRious Library CDN]
+I[Font Awesome CDN]
+J[Google Fonts CDN]
 end
 subgraph "Server-Side Layer"
-H[Express Server]
-I[PagBank API]
-J[PostgreSQL Database]
+K[Express Server]
+L[PagBank API]
+M[PostgreSQL Database]
+N[Administrative Panel]
+O[Real-time Monitoring]
 end
 subgraph "External Services"
-K[Alimentares/Kali POS]
-L[Payment Providers]
+P[Alimentares/Kali POS]
+Q[Payment Providers]
+R[Admin Authentication]
 end
-A --> H
+A --> K
+B --> K
+C --> K
+D --> K
+E --> K
+F --> K
+G --> K
 B --> H
 C --> H
 D --> H
-B --> E
-C --> E
-D --> E
-H --> I
-H --> J
-H --> K
-H --> L
+E --> I
+K --> L
+K --> M
+K --> N
+K --> O
+K --> P
+K --> Q
+K --> R
 ```
 
 **Diagram sources**
-- [server.js:1-890](file://server.js#L1-L890)
+- [server.js:1-914](file://server.js#L1-L914)
 - [checkout.html:1-768](file://checkout.html#L1-L768)
-- [cadastro.html:1-1277](file://cadastro.html#L1-L1277)
+- [admin.html:1-304](file://admin.html#L1-L304)
+- [pedido-status.html:1-341](file://pedido-status.html#L1-L341)
 
-The architecture consists of four primary layers:
+The architecture consists of five primary layers:
 
 1. **Static Frontend Layer**: Pure HTML/CSS/JavaScript applications served statically
 2. **CDN Dependencies Layer**: External libraries loaded via Content Delivery Networks
-3. **Node.js Backend Layer**: Express server handling payment processing and data persistence
-4. **External Integration Layer**: Payment providers and POS system integrations
+3. **Node.js Backend Layer**: Express server handling dual payment processing and data persistence
+4. **Administrative Panel Layer**: Real-time order monitoring and management system
+5. **External Integration Layer**: Payment providers and POS system integrations
 
 ## Hybrid Architecture Design
 
-The system employs a strategic separation between labeling and payment functionalities:
+The system employs a strategic separation between labeling and dual payment functionalities:
 
 ### Labeling System (Pure Frontend)
 - **Location**: [cadastro.html](file://cadastro.html)
@@ -96,30 +125,34 @@ The system employs a strategic separation between labeling and payment functiona
 - **Operation**: 100% offline capable after initial load
 - **Purpose**: Product labeling, QR code generation, and inventory management
 
-### Payment System (Backend API)
+### Dual Payment System (Backend API)
 - **Location**: [server.js](file://server.js)
 - **Technology**: Node.js/Express with PostgreSQL
-- **Operation**: Online payment processing with webhook support
-- **Purpose**: Payment orchestration, order management, and access control
+- **Operation**: Online payment processing with webhook support and administrative oversight
+- **Purpose**: Dual payment orchestration, order management, and access control
 
 ```mermaid
 flowchart TD
 Start([User Access]) --> CheckMode{"Payment Required?"}
 CheckMode --> |No| Labeling["Labeling System<br/>Pure Frontend"]
-CheckMode --> |Yes| Payment["Payment System<br/>Backend API"]
+CheckMode --> |Yes| PaymentChoice{"Select Payment Method"}
+PaymentChoice --> |Automated| PagBank["PagBank Integration<br/>Automatic Processing"]
+PaymentChoice --> |Manual| ManualFlow["Manual Payment Flow<br/>Admin Oversight"]
 Labeling --> Offline["Offline Operation<br/>localStorage"]
-Payment --> Online["Online Processing<br/>External APIs"]
-Offline --> QRGen["QR Generation<br/>CDN Libraries"]
+PagBank --> Online["Online Processing<br/>External APIs"]
+ManualFlow --> AdminPanel["Admin Panel<br/>Real-time Monitoring"]
 Online --> OrderCreate["Order Creation<br/>Database Storage"]
-Online --> Webhook["Webhook Processing<br/>Status Updates"]
-QRGen --> Print["Print Labels<br/>POS Integration"]
-OrderCreate --> Access["Access Control<br/>User Management"]
-Webhook --> Access
+AdminPanel --> OrderManagement["Order Management<br/>Manual Verification"]
+OrderCreate --> Webhook["Webhook Processing<br/>Status Updates"]
+AdminPanel --> CustomerStatus["Customer Status Page<br/>Real-time Updates"]
+Webhook --> Access["Access Control<br/>User Management"]
+CustomerStatus --> Access
 ```
 
 **Diagram sources**
-- [cadastro.html:754-1277](file://cadastro.html#L754-L1277)
-- [server.js:82-280](file://server.js#L82-L280)
+- [cadastro.html:750-1277](file://cadastro.html#L750-L1277)
+- [server.js:82-914](file://server.js#L82-L914)
+- [checkout.html:626-768](file://checkout.html#L626-L768)
 
 ## Frontend Architecture
 
@@ -134,6 +167,9 @@ class StaticPages {
 +checkout.html
 +pagamento-retorno.html
 +cadastro.html
++admin.html
++admin-login.html
++pedido-status.html
 +CSS Stylesheets
 +JavaScript Modules
 }
@@ -158,14 +194,22 @@ class Authentication {
 +logout()
 +currentUser
 }
+class AdminPanel {
++login()
++logout()
++monitorOrders()
++managePayments()
+}
 StaticPages --> CDNLibraries : "uses"
 StaticPages --> DataManager : "manages"
 StaticPages --> Authentication : "handles"
+AdminPanel --> DataManager : "manages"
 ```
 
 **Diagram sources**
-- [cadastro.html:759-815](file://cadastro.html#L759-L815)
-- [checkout.html:510-768](file://checkout.html#L510-L768)
+- [cadastro.html:808-873](file://cadastro.html#L808-L873)
+- [checkout.html:626-768](file://checkout.html#L626-L768)
+- [admin.html:110-304](file://admin.html#L110-L304)
 
 ### Client-Side Data Persistence
 
@@ -185,15 +229,15 @@ External libraries are loaded via CDN for optimal performance and reliability:
 - **Google Fonts**: [https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap)
 
 **Section sources**
-- [cadastro.html:759-815](file://cadastro.html#L759-L815)
-- [checkout.html:510-768](file://checkout.html#L510-L768)
+- [cadastro.html:808-873](file://cadastro.html#L808-L873)
+- [checkout.html:626-768](file://checkout.html#L626-L768)
 - [README.md:95-122](file://README.md#L95-L122)
 
 ## Backend Architecture
 
 ### Express Server Configuration
 
-The backend server provides RESTful APIs for payment processing and administrative functions:
+The backend server provides RESTful APIs for dual payment processing and administrative functions:
 
 ```mermaid
 sequenceDiagram
@@ -201,34 +245,62 @@ participant Client as "Client Browser"
 participant Server as "Express Server"
 participant Database as "PostgreSQL"
 participant PagBank as "PagBank API"
+participant AdminPanel as "Admin Panel"
 Client->>Server : POST /api/criar-pagamento
 Server->>PagBank : Create Payment Order
 PagBank-->>Server : Payment Details
 Server->>Database : Save Order Record
 Database-->>Server : Confirmation
 Server-->>Client : Payment Link/QR Code
-Note over Client,PagBank : Payment Processing Flow
+Note over Client,PagBank : Automated Payment Flow
+Client->>Server : POST /api/manual/criar-pedido
+Server->>Database : Save Manual Order
+Server-->>Client : Order Token/URL
+Note over Client,AdminPanel : Manual Payment Flow
+AdminPanel->>Server : POST /api/admin/pedido/ : id/confirmar-pix
+Server->>Database : Update Order Status
+Server->>Client : Order Status Update
 ```
 
 **Diagram sources**
 - [server.js:82-280](file://server.js#L82-L280)
+- [server.js:540-617](file://server.js#L540-L617)
+- [server.js:805-890](file://server.js#L805-L890)
 
-### Payment Processing Endpoints
+### Dual Payment Processing Endpoints
 
-The backend exposes several key endpoints:
+The backend exposes comprehensive endpoints for both payment methods:
 
+#### Automated Payment Endpoints
 | Endpoint | Method | Description | Authentication |
 |----------|--------|-------------|----------------|
 | `/api/criar-pagamento` | POST | Create payment order with PagBank | None |
 | `/api/webhook/pagbank` | POST | Receive payment notifications | None |
 | `/api/pedido/:id` | GET | Check payment status | None |
 | `/api/pedidos` | GET | List all orders | Admin Required |
+
+#### Manual Payment Endpoints
+| Endpoint | Method | Description | Authentication |
+|----------|--------|-------------|----------------|
+| `/api/manual/criar-pedido` | POST | Create manual payment order | None |
+| `/api/manual/upload-comprovante/:token` | POST | Upload PIX receipt | None |
+| `/api/manual/pedido/:token` | GET | Get order details for customer | None |
+| `/pedido/:token` | GET | Customer order status page | None |
+
+#### Administrative Endpoints
+| Endpoint | Method | Description | Authentication |
+|----------|--------|-------------|----------------|
 | `/api/admin/login` | POST | Admin authentication | None |
+| `/api/admin/logout` | POST | Admin logout | None |
 | `/api/admin/pedidos` | GET | Admin order management | Admin Required |
+| `/api/admin/pedido/:id/confirmar-pix` | POST | Confirm PIX received | Admin Required |
+| `/api/admin/pedido/:id/enviar-link-cartao` | POST | Send credit card link | Admin Required |
+| `/api/admin/pedido/:id/confirmar-pagamento` | POST | Confirm total payment | Admin Required |
+| `/api/admin/pedido/:id/cancelar` | POST | Cancel order | Admin Required |
 
 ### Database Schema
 
-The PostgreSQL database maintains two primary tables:
+The PostgreSQL database maintains comprehensive tables with enhanced support for manual payment flows:
 
 ```mermaid
 erDiagram
@@ -269,18 +341,189 @@ timestamp liberado_em
 PEDIDOS ||--o{ USUARIOS : "relates_to"
 ```
 
+**Manual Payment Flow Enhancements:**
+- **tipo_fluxo**: 'pagbank' or 'manual' - distinguishes payment methods
+- **valor_pix**: Separate PIX amount allocation
+- **valor_cartao**: Separate credit card amount allocation
+- **pix_pago**: PIX payment confirmation flag
+- **comprovante_pix_path**: Uploaded receipt storage
+- **link_cartao_admin**: Admin-generated credit card payment link
+- **observacoes_admin**: Admin notes for customer visibility
+- **token_acesso**: Unique token for customer order tracking
+
 **Diagram sources**
 - [database.sql:13-58](file://database.sql#L13-L58)
+- [migration-manual.sql:9-39](file://migration-manual.sql#L9-L39)
 
 **Section sources**
-- [server.js:82-800](file://server.js#L82-L800)
+- [server.js:82-914](file://server.js#L82-L914)
 - [database.sql:13-58](file://database.sql#L13-L58)
+- [migration-manual.sql:9-39](file://migration-manual.sql#L9-L39)
+
+## Dual Payment Processing System
+
+### Automated Payment Flow (PagBank Integration)
+
+The automated payment system handles direct integration with PagBank for seamless payment processing:
+
+```mermaid
+flowchart TD
+Start([Automated Payment Request]) --> ValidateData["Validate Customer Data"]
+ValidateData --> CreateOrder["Create PagBank Order"]
+CreateOrder --> SendToPagBank["Send to PagBank API"]
+SendToPagBank --> RedirectCustomer["Redirect to PagBank"]
+RedirectCustomer --> CustomerPays["Customer Completes Payment"]
+CustomerPays --> PagBankWebhook["PagBank Webhook Notification"]
+PagBankWebhook --> UpdateStatus["Update Order Status"]
+UpdateStatus --> AutoAccess["Auto-release Access"]
+AutoAccess --> Complete([Payment Complete])
+```
+
+**Diagram sources**
+- [server.js:82-280](file://server.js#L82-L280)
+- [checkout.html:674-718](file://checkout.html#L674-L718)
+
+### Manual Payment Flow (Admin Oversight)
+
+The manual payment system provides comprehensive admin oversight for complex payment arrangements:
+
+```mermaid
+flowchart TD
+Start([Manual Payment Request]) --> ValidateManualData["Validate Manual Payment Data"]
+ValidateManualData --> SplitAmount["Validate Amount Split (R$ 6.000,00)"]
+SplitAmount --> CreateManualOrder["Create Manual Order"]
+CreateManualOrder --> GenerateToken["Generate Unique Token"]
+GenerateToken --> SendToCustomer["Send Customer Link"]
+SendToCustomer --> CustomerPaysPIX["Customer Pays PIX"]
+CustomerPaysPIX --> UploadReceipt["Customer Uploads Receipt"]
+UploadReceipt --> AdminReview["Admin Reviews Receipt"]
+AdminReview --> ConfirmPIX["Admin Confirms PIX"]
+ConfirmPIX --> SendCardLink["Admin Sends Credit Card Link"]
+SendCardLink --> CustomerPaysCard["Customer Pays Credit Card"]
+CustomerPaysCard --> AdminConfirm["Admin Confirms Total Payment"]
+AdminConfirm --> ManualAccess["Manual Access Release"]
+ManualAccess --> Complete([Payment Complete])
+```
+
+**Diagram sources**
+- [server.js:540-617](file://server.js#L540-L617)
+- [server.js:805-890](file://server.js#L805-L890)
+- [pedido-status.html:172-338](file://pedido-status.html#L172-L338)
+
+### Payment Method Orchestration
+
+The system intelligently orchestrates between payment methods based on customer selection:
+
+```mermaid
+flowchart TD
+CustomerSelection["Customer Payment Selection"] --> CheckMethod{"Payment Method"}
+CheckMethod --> |'avista'/'cartao'| AutomatedFlow["Automated Flow"]
+CheckMethod --> |'manual'| ManualFlow["Manual Flow"]
+CheckMethod --> |'parcelado'| ParceladoFlow["Parcelado Flow"]
+AutomatedFlow --> PagBankAPI["PagBank API Integration"]
+ManualFlow --> ManualAPI["Manual Payment API"]
+ParceladoFlow --> ParceladoAPI["Parcelado API"]
+PagBankAPI --> StatusMonitoring["Real-time Status Monitoring"]
+ManualAPI --> AdminPanel["Admin Panel Monitoring"]
+ParceladoAPI --> StatusMonitoring
+StatusMonitoring --> AccessControl["Access Control Logic"]
+AdminPanel --> AccessControl
+AccessControl --> UserAccess["User Access Granted"]
+```
+
+**Diagram sources**
+- [checkout.html:645-672](file://checkout.html#L645-L672)
+- [server.js:98-113](file://server.js#L98-L113)
+
+**Section sources**
+- [checkout.html:626-768](file://checkout.html#L626-L768)
+- [server.js:82-345](file://server.js#L82-L345)
+- [server.js:540-617](file://server.js#L540-L617)
+
+## Administrative Panel System
+
+### Admin Panel Architecture
+
+The administrative panel provides comprehensive real-time monitoring and management capabilities:
+
+```mermaid
+sequenceDiagram
+participant Admin as "Admin User"
+participant AdminPanel as "Admin Panel"
+participant Server as "Express Server"
+participant Database as "PostgreSQL"
+Admin->>AdminPanel : Login
+AdminPanel->>Server : POST /api/admin/login
+Server->>Database : Validate Credentials
+Database-->>Server : Success/Failure
+Server-->>AdminPanel : Session Token
+AdminPanel->>Server : GET /api/admin/pedidos
+Server->>Database : Query Orders
+Database-->>Server : Orders List
+Server-->>AdminPanel : Orders Data
+AdminPanel->>Admin : Display Orders
+Admin->>AdminPanel : Action (Confirm, Cancel, etc.)
+AdminPanel->>Server : POST /api/admin/pedido/ : id/action
+Server->>Database : Update Order
+Database-->>Server : Confirmation
+Server-->>AdminPanel : Success
+AdminPanel->>Admin : Update Display
+```
+
+**Diagram sources**
+- [admin.html:137-304](file://admin.html#L137-L304)
+- [server.js:737-760](file://server.js#L737-L760)
+- [server.js:763-802](file://server.js#L763-L802)
+
+### Real-time Order Monitoring
+
+The admin panel features sophisticated real-time monitoring capabilities:
+
+| Feature | Description | Implementation |
+|---------|-------------|----------------|
+| **Live Updates** | Automatic order status refresh every 30 seconds | JavaScript setInterval |
+| **Status Filtering** | Filter orders by status (Pending, Paid, Cancelled) | Dynamic filtering buttons |
+| **Real-time Alerts** | Visual indicators for urgent orders | Color-coded badges |
+| **Bulk Actions** | Mass operations on multiple orders | Checkbox selection |
+| **Order Analytics** | Summary statistics and revenue tracking | Dynamic calculations |
+
+### Administrative Functions
+
+The admin panel provides comprehensive order management capabilities:
+
+```mermaid
+flowchart TD
+AdminPanel["Admin Panel"] --> OrderList["Order List View"]
+OrderList --> StatusFilter["Status Filter"]
+OrderList --> ActionButtons["Action Buttons"]
+ActionButtons --> ConfirmPIX["Confirm PIX"]
+ActionButtons --> SendCardLink["Send Card Link"]
+ActionButtons --> ConfirmPayment["Confirm Total Payment"]
+ActionButtons --> CancelOrder["Cancel Order"]
+ActionButtons --> CopyLink["Copy Customer Link"]
+ConfirmPIX --> UpdateDatabase["Update Database"]
+SendCardLink --> UpdateDatabase
+ConfirmPayment --> UpdateDatabase
+CancelOrder --> UpdateDatabase
+CopyLink --> Clipboard["Copy to Clipboard"]
+UpdateDatabase --> RefreshDisplay["Refresh Display"]
+RefreshDisplay --> AdminPanel
+```
+
+**Diagram sources**
+- [admin.html:181-250](file://admin.html#L181-L250)
+- [server.js:805-890](file://server.js#L805-L890)
+
+**Section sources**
+- [admin.html:1-304](file://admin.html#L1-L304)
+- [admin-login.html:1-81](file://admin-login.html#L1-L81)
+- [server.js:703-914](file://server.js#L703-L914)
 
 ## Data Flow Patterns
 
-### Payment Processing Workflow
+### Enhanced Payment Processing Workflow
 
-The system implements a sophisticated payment flow supporting multiple payment methods:
+The system implements sophisticated dual payment flow supporting multiple payment methods:
 
 ```mermaid
 flowchart TD
@@ -289,21 +532,35 @@ Method --> Avista["À Vista<br/>Direct PIX Payment"]
 Method --> Entrada["Entrada<br/>Partial Payment (PIX)"]
 Method --> Cartao["Cartão<br/>Credit Card Payment"]
 Method --> Manual["Manual<br/>PIX + Cartão Combination"]
+Method --> Parcelado["Parcelado<br/>Two-stage Payment"]
 Avista --> CreateOrder["Create Order in Database"]
 Entrada --> CreateOrder
 Cartao --> CreateOrder
-Manual --> CreateOrder
+Manual --> CreateManualOrder["Create Manual Order"]
+Parcelado --> CreateOrder
 CreateOrder --> SendToPagBank["Send to PagBank API"]
+CreateManualOrder --> GenerateToken["Generate Customer Token"]
+GenerateToken --> SendToCustomer["Send Customer Link"]
 SendToPagBank --> WaitPayment["Wait for Payment"]
 WaitPayment --> PagBankWebhook["Receive Webhook"]
 PagBankWebhook --> UpdateStatus["Update Order Status"]
-UpdateStatus --> ReleaseAccess["Release System Access"]
-ReleaseAccess --> Complete([Payment Complete])
+UpdateStatus --> AutoAccess["Auto-release Access"]
+SendToCustomer --> CustomerPays["Customer Pays"]
+CustomerPays --> UploadReceipt["Customer Uploads Receipt"]
+UploadReceipt --> AdminReview["Admin Reviews Receipt"]
+AdminReview --> ConfirmPIX["Admin Confirms PIX"]
+ConfirmPIX --> SendCardLink["Admin Sends Card Link"]
+SendCardLink --> CustomerPaysCard["Customer Pays Card"]
+CustomerPaysCard --> AdminConfirm["Admin Confirms Total"]
+AdminConfirm --> ManualAccess["Manual Access Release"]
+AutoAccess --> Complete([Payment Complete])
+ManualAccess --> Complete
 ```
 
 **Diagram sources**
 - [server.js:82-345](file://server.js#L82-L345)
-- [checkout.html:626-718](file://checkout.html#L626-L718)
+- [server.js:540-617](file://server.js#L540-L617)
+- [checkout.html:626-768](file://checkout.html#L626-L768)
 
 ### Label Generation Process
 
@@ -327,11 +584,12 @@ Note over User,QR : 100% Offline Operation
 ```
 
 **Diagram sources**
-- [cadastro.html:947-1055](file://cadastro.html#L947-L1055)
+- [cadastro.html:1136-1244](file://cadastro.html#L1136-L1244)
 
 **Section sources**
 - [checkout.html:626-768](file://checkout.html#L626-L768)
 - [server.js:82-345](file://server.js#L82-L345)
+- [cadastro.html:1136-1244](file://cadastro.html#L1136-L1244)
 
 ## Security Model
 
@@ -346,18 +604,23 @@ A[Input Validation]
 B[Output Encoding]
 C[Session Management]
 D[Local Storage Security]
+E[Admin Authentication]
 end
 subgraph "Data Protection"
-E[Username/Password]
-F[Session Tokens]
-G[QR Data Encryption]
+F[Username/Password]
+G[Session Tokens]
+H[QR Data Encryption]
+I[Admin Session Cookies]
 end
 A --> B
 B --> C
 C --> D
-D --> E
-E --> F
+D --> F
+E --> I
 F --> G
+G --> H
+I --> J[Cookie Security]
+J --> K[HttpOnly, SameSite, Secure]
 ```
 
 **Security Measures:**
@@ -365,6 +628,7 @@ F --> G
 - **Output Encoding**: Prevents XSS attacks through HTML escaping
 - **Session Management**: Uses sessionStorage for temporary user sessions
 - **Local Storage Security**: Data stored locally with basic protection
+- **Admin Session Security**: HttpOnly cookies with HMAC signature verification
 
 ### Server-Side Security
 
@@ -376,6 +640,8 @@ The backend implements comprehensive security controls:
 | **Cookie Security** | HttpOnly, SameSite, Secure flags | Admin session protection |
 | **Database Security** | Connection pooling, prepared statements | SQL injection prevention |
 | **API Security** | Environment variable configuration | Sensitive data protection |
+| **Admin Authentication** | HMAC-signed session tokens | Session integrity |
+| **File Upload Security** | MIME type validation, size limits | Malicious file prevention |
 
 ### Authentication Flow
 
@@ -396,11 +662,11 @@ Note over Admin,Database : Session Validated Until Expiration
 ```
 
 **Diagram sources**
-- [server.js:713-730](file://server.js#L713-L730)
+- [server.js:737-760](file://server.js#L737-L760)
 
 **Section sources**
 - [server.js:15-27](file://server.js#L15-L27)
-- [server.js:713-730](file://server.js#L713-L730)
+- [server.js:737-760](file://server.js#L737-L760)
 - [README.md:117-122](file://README.md#L117-L122)
 
 ## Browser Compatibility
@@ -463,6 +729,8 @@ subgraph "External Systems"
 G[Payment Processing]
 H[User Management]
 I[Inventory Tracking]
+J[Admin Panel]
+K[Real-time Monitoring]
 end
 A --> D
 B --> E
@@ -473,25 +741,29 @@ F --> I
 G --> A
 H --> B
 I --> C
+J --> G
+K --> J
 ```
 
 ### Payment Provider Integration
 
-The system integrates with multiple payment providers through PagBank:
+The system integrates with multiple payment providers through dual architecture:
 
-- **PagBank API**: Primary payment processor
-- **PIX Integration**: Instant payment processing
-- **Credit Card Processing**: Installment payment options
-- **Webhook Notifications**: Real-time payment status updates
+- **PagBank API**: Primary automated payment processor
+- **PIX Integration**: Instant payment processing with webhook notifications
+- **Credit Card Processing**: Installment payment options with admin oversight
+- **Manual Payment Flow**: Admin-controlled payment coordination
+- **Webhook Notifications**: Real-time payment status updates for both methods
 
 ### External Service Dependencies
 
 | Service | Purpose | Integration Method |
 |---------|---------|-------------------|
 | **CDN Libraries** | QR Code generation, icons, fonts | Static asset loading |
-| **PagBank API** | Payment processing | RESTful API calls |
+| **PagBank API** | Automated payment processing | RESTful API calls |
 | **PostgreSQL** | Data persistence | Connection pooling |
 | **Render Platform** | Hosting | Platform-as-a-Service |
+| **Admin Panel** | Order monitoring | Real-time WebSocket |
 
 **Section sources**
 - [PAGAMENTO-README.md:69-97](file://PAGAMENTO-README.md#L69-L97)
@@ -529,6 +801,7 @@ The system implements a comprehensive data persistence strategy:
 | **Application Config** | localStorage | System preferences | Browser reset |
 | **Active Sessions** | sessionStorage | Current user session | Tab close |
 | **Payment Records** | PostgreSQL | Payment history and status | Server backup |
+| **Manual Payment Data** | PostgreSQL | Manual payment flows | Server backup |
 
 ### Offline Features
 
@@ -553,6 +826,7 @@ The client-side architecture prioritizes performance through:
 - **Minimal Dependencies**: Only essential libraries loaded
 - **Efficient DOM Manipulation**: Optimized for label generation
 - **Responsive Design**: Mobile-first approach
+- **Real-time Updates**: Efficient polling for admin panel
 
 ### Backend Performance
 
@@ -562,6 +836,7 @@ The server-side implementation focuses on:
 - **Caching Strategies**: Response caching for static content
 - **Error Handling**: Graceful degradation and recovery
 - **Resource Management**: Proper cleanup and memory management
+- **Admin Panel Optimization**: Efficient order querying and filtering
 
 ### Scalability Considerations
 
@@ -571,6 +846,7 @@ The system is designed for horizontal scaling:
 - **Database Optimization**: Indexes and query optimization
 - **CDN Distribution**: Global content delivery
 - **Microservice Ready**: Modular architecture for future expansion
+- **Real-time Monitoring**: Efficient admin panel updates
 
 ## Troubleshooting Guide
 
@@ -583,6 +859,8 @@ The system is designed for horizontal scaling:
 | **Offline Mode Problems** | Labels not generating, data loss | Clear browser cache, check localStorage quota |
 | **Admin Login Issues** | Cannot access admin panel | Verify credentials, check cookie settings |
 | **Database Connection** | Server errors, connection timeouts | Verify PostgreSQL configuration, check network |
+| **Manual Payment Issues** | Orders stuck in PENDING_PIX | Check admin panel for receipt uploads |
+| **Admin Panel Not Updating** | Stale order information | Check browser console for JavaScript errors |
 
 ### Debugging Tools
 
@@ -592,6 +870,7 @@ The system includes built-in debugging capabilities:
 - **Error Handling**: Comprehensive error reporting
 - **Status Monitoring**: Real-time payment status checking
 - **Development Mode**: Enhanced logging for development
+- **Admin Panel Logs**: Order action audit trails
 
 ### Maintenance Procedures
 
@@ -601,6 +880,7 @@ Regular maintenance tasks include:
 - **Library Updates**: Periodic CDN library updates
 - **Security Audits**: Regular credential rotation
 - **Performance Monitoring**: System health checks
+- **Admin Panel Updates**: Real-time monitoring optimization
 
 **Section sources**
 - [server.js:239-280](file://server.js#L239-L280)
@@ -608,14 +888,16 @@ Regular maintenance tasks include:
 
 ## Conclusion
 
-The qretiquetas.com system represents a sophisticated hybrid architecture that successfully balances offline functionality with robust payment processing capabilities. The separation between the labeling system (pure frontend) and payment system (backend API) creates a clean architectural boundary that enhances maintainability and scalability.
+The qretiquetas.com system represents a sophisticated hybrid architecture that successfully balances offline functionality with robust dual payment processing capabilities. The recent enhancement introduces comprehensive administrative oversight with real-time order monitoring, creating a complete payment ecosystem that serves both automated and manual payment scenarios.
 
 Key architectural strengths include:
 
-- **Modular Design**: Clear separation of concerns between labeling and payment systems
+- **Modular Design**: Clear separation of concerns between labeling and dual payment systems
 - **Offline Capability**: 100% offline operation for labeling functionality
+- **Dual Payment Architecture**: Seamless integration of automated PagBank and manual payment flows
+- **Administrative Excellence**: Real-time order monitoring and comprehensive admin panel
 - **Scalable Backend**: Express server with PostgreSQL for payment processing
 - **POS Integration**: Seamless integration with Alimentares/Kali point-of-sale environment
 - **Security Model**: Multi-layered security approach for both client and server sides
 
-The system's architecture provides an excellent foundation for future enhancements while maintaining reliability and performance in the demanding retail POS environment. The hybrid approach ensures that critical labeling functionality remains available even during network outages, while payment processing continues to leverage external payment providers for secure transaction handling.
+The system's architecture provides an excellent foundation for future enhancements while maintaining reliability and performance in the demanding retail POS environment. The dual payment processing approach ensures that critical labeling functionality remains available even during network outages, while payment processing continues to leverage external payment providers for secure transaction handling. The administrative panel system adds crucial business intelligence and operational control, making the system suitable for enterprise-level deployment in the Alimentares/Kali POS environment.
