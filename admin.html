@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - qrstiquetas.com</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: #f3f4f6; color: #1f2937; min-height: 100vh; }
+        header {
+            background: #1f2937; color: #fff;
+            padding: 14px 22px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 10;
+        }
+        header h1 { font-size: 18px; }
+        header .actions { display: flex; gap: 8px; align-items: center; }
+        header button { background: #ef4444; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
+        header button.refresh { background: #4f46e5; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 22px; }
+        .filtros {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;
+        }
+        .filtros button {
+            padding: 8px 14px; border: 1.5px solid #d1d5db; background: #fff;
+            border-radius: 20px; font-size: 13px; cursor: pointer; color: #374151;
+        }
+        .filtros button.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+        .summary {
+            background: #fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px;
+            display: flex; gap: 24px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .summary div { font-size: 13px; color: #6b7280; }
+        .summary div strong { color: #1f2937; font-size: 18px; display: block; }
+        .pedido {
+            background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .pedido .topo {
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+        }
+        .pedido h3 { font-size: 15px; margin-bottom: 4px; }
+        .pedido .meta { font-size: 12px; color: #6b7280; }
+        .badge {
+            display: inline-block; padding: 4px 12px; border-radius: 14px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .badge.pending  { background: #fef3c7; color: #92400e; }
+        .badge.review   { background: #dbeafe; color: #1e40af; }
+        .badge.aguarda  { background: #d1fae5; color: #065f46; }
+        .badge.cartao   { background: #ede9fe; color: #5b21b6; }
+        .badge.paid     { background: #16a34a; color: #fff; }
+        .badge.cancel   { background: #fee2e2; color: #991b1b; }
+        .badge.outro    { background: #e5e7eb; color: #374151; }
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px 14px; margin-top: 12px; font-size: 13px;
+        }
+        .grid div span { color: #6b7280; font-size: 11px; display: block; text-transform: uppercase; letter-spacing: 0.3px; }
+        .grid div strong { color: #1f2937; }
+        .acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .acoes button, .acoes a {
+            padding: 8px 14px; border-radius: 6px; font-size: 13px;
+            cursor: pointer; border: none; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #4f46e5; color: #fff; }
+        .btn-success { background: #16a34a; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #fff; }
+        .btn-danger  { background: #ef4444; color: #fff; }
+        .btn-outline { background: #fff; color: #374151; border: 1.5px solid #d1d5db; }
+        .link-input {
+            display: flex; gap: 6px; margin-top: 12px;
+            background: #f9fafb; padding: 10px; border-radius: 8px; flex-wrap: wrap;
+        }
+        .link-input input {
+            flex: 1; min-width: 220px; padding: 8px 10px; border: 1.5px solid #d1d5db; border-radius: 6px; font-size: 13px;
+        }
+        .empty { text-align: center; padding: 60px 20px; color: #6b7280; }
+        @media (max-width: 600px) {
+            .pedido .topo { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔐 Painel Admin · qrstiquetas.com</h1>
+        <div class="actions">
+            <button class="refresh" onclick="carregar()" title="Atualizar"><i class="fas fa-sync"></i> Atualizar</button>
+            <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filtros">
+            <button class="active" data-status="todos" onclick="setFiltro('todos', this)">Todos</button>
+            <button data-status="PENDING_PIX" onclick="setFiltro('PENDING_PIX', this)">Aguardando PIX</button>
+            <button data-status="PIX_ENVIADO" onclick="setFiltro('PIX_ENVIADO', this)">PIX em conferência</button>
+            <button data-status="PIX_CONFIRMADO_AGUARDA_CARTAO" onclick="setFiltro('PIX_CONFIRMADO_AGUARDA_CARTAO', this)">Aguardando link cartão</button>
+            <button data-status="LINK_CARTAO_ENVIADO" onclick="setFiltro('LINK_CARTAO_ENVIADO', this)">Cartão pendente</button>
+            <button data-status="PAID" onclick="setFiltro('PAID', this)">Pagos</button>
+            <button data-status="CANCELADO" onclick="setFiltro('CANCELADO', this)">Cancelados</button>
+        </div>
+
+        <div class="summary" id="summary"></div>
+        <div id="lista"></div>
+    </div>
+
+    <script>
+        let filtro = 'todos';
+        let intervalo = null;
+
+        function brl(c) { return ((c||0)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+        function fmt(d) { return d ? new Date(d).toLocaleString('pt-BR') : '-'; }
+
+        function badge(s) {
+            const m = {
+                'PENDING_PIX': ['pending', 'Aguardando PIX'],
+                'PIX_ENVIADO': ['review', 'PIX em conferência'],
+                'PIX_CONFIRMADO_AGUARDA_CARTAO': ['aguarda', 'Aguardando link cartão'],
+                'LINK_CARTAO_ENVIADO': ['cartao', 'Cartão pendente'],
+                'PAID': ['paid', 'Pago'],
+                'CANCELADO': ['cancel', 'Cancelado']
+            };
+            const it = m[s] || ['outro', s || '-'];
+            return `<span class="badge ${it[0]}">${it[1]}</span>`;
+        }
+
+        function setFiltro(s, btn) {
+            filtro = s;
+            document.querySelectorAll('.filtros button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            carregar();
+        }
+
+        async function carregar() {
+            try {
+                const url = filtro === 'todos' ? '/api/admin/pedidos' : `/api/admin/pedidos?status=${encodeURIComponent(filtro)}`;
+                const r = await fetch(url);
+                if (r.status === 401) {
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                const lista = await r.json();
+                renderizar(lista);
+            } catch (e) {
+                document.getElementById('lista').innerHTML = `<div class="empty">Erro ao carregar pedidos.</div>`;
+            }
+        }
+
+        function renderizar(lista) {
+            const sum = document.getElementById('summary');
+            const cont = { total: lista.length, pix: 0, conf: 0, aguarda: 0, cartao: 0, paid: 0, valor: 0 };
+            lista.forEach(p => {
+                if (p.status === 'PENDING_PIX') cont.pix++;
+                if (p.status === 'PIX_ENVIADO') cont.conf++;
+                if (p.status === 'PIX_CONFIRMADO_AGUARDA_CARTAO') cont.aguarda++;
+                if (p.status === 'LINK_CARTAO_ENVIADO') cont.cartao++;
+                if (p.status === 'PAID') { cont.paid++; cont.valor += p.valor_total || 0; }
+            });
+            sum.innerHTML = `
+                <div><strong>${cont.total}</strong> Total</div>
+                <div><strong>${cont.pix}</strong> Aguardando PIX</div>
+                <div><strong>${cont.conf}</strong> Para conferir PIX</div>
+                <div><strong>${cont.aguarda}</strong> Aguardando link cartão</div>
+                <div><strong>${cont.cartao}</strong> Cartão pendente</div>
+                <div><strong>${cont.paid}</strong> Pagos</div>
+                <div><strong>${brl(cont.valor)}</strong> Recebido</div>
+            `;
+
+            const el = document.getElementById('lista');
+            if (!lista.length) {
+                el.innerHTML = `<div class="empty"><i class="fas fa-inbox" style="font-size:36px;color:#9ca3af;"></i><p style="margin-top:10px;">Nenhum pedido neste filtro.</p></div>`;
+                return;
+            }
+
+            el.innerHTML = lista.map(p => renderPedido(p)).join('');
+        }
+
+        function renderPedido(p) {
+            const isManual = p.tipo_fluxo === 'manual';
+            const linkPedido = p.token_acesso ? `${location.origin}/pedido/${p.token_acesso}` : null;
+
+            let acoes = '';
+
+            if (isManual) {
+                if (p.status === 'PIX_ENVIADO') {
+                    acoes += `
+                        ${p.comprovante_url ? `<a class="btn-outline" href="${p.comprovante_url}" target="_blank"><i class="fas fa-eye"></i> Ver comprovante</a>` : ''}
+                        <button class="btn-success" onclick="confirmarPix('${p.id}')"><i class="fas fa-check"></i> Confirmar PIX recebido</button>
+                    `;
+                }
+                if (p.status === 'PENDING_PIX') {
+                    acoes += `<span style="color:#6b7280;font-size:12px;">Aguardando o cliente enviar o comprovante.</span>`;
+                }
+                if (p.status === 'PIX_CONFIRMADO_AGUARDA_CARTAO' || p.status === 'LINK_CARTAO_ENVIADO') {
+                    acoes += `
+                        <div class="link-input" style="width:100%;">
+                            <input type="url" id="link-${p.id}" placeholder="Cole aqui o link de pagamento do cartão (https://...)" value="${p.link_cartao || ''}">
+                            <button class="btn-primary" onclick="enviarLink('${p.id}')">
+                                <i class="fas fa-paper-plane"></i> ${p.link_cartao ? 'Atualizar link' : 'Enviar link'}
+                            </button>
+                        </div>
+                    `;
+                }
+                if (p.status === 'LINK_CARTAO_ENVIADO') {
+                    acoes += `<button class="btn-success" onclick="confirmarPagamento('${p.id}')"><i class="fas fa-unlock"></i> Confirmar pagamento total e liberar acesso</button>`;
+                }
+            } else {
+                // PagBank legado
+                if (p.status !== 'PAID' && p.status !== 'CANCELADO') {
+                    acoes += `<button class="btn-success" onclick="confirmarPagamento('${p.id}')"><i class="fas fa-unlock"></i> Liberar acesso</button>`;
+                }
+            }
+
+            if (p.status !== 'PAID' && p.status !== 'CANCELADO') {
+                acoes += `<button class="btn-danger" onclick="cancelar('${p.id}')"><i class="fas fa-times"></i> Cancelar</button>`;
+            }
+
+            if (linkPedido) {
+                acoes += `<button class="btn-outline" onclick="copiar('${linkPedido}')"><i class="fas fa-link"></i> Copiar link do cliente</button>`;
+            }
+
+            return `
+                <div class="pedido">
+                    <div class="topo">
+                        <div>
+                            <h3>${p.cliente} <span style="color:#6b7280;font-weight:400;font-size:13px;">&lt;${p.email}&gt;</span></h3>
+                            <div class="meta">
+                                ${p.id} · ${fmt(p.criado_em)}
+                                · ${isManual ? '<strong style="color:#f59e0b;">MANUAL</strong>' : '<strong style="color:#0ea5e9;">PagBank</strong>'}
+                            </div>
+                        </div>
+                        <div>${badge(p.status)}</div>
+                    </div>
+                    <div class="grid">
+                        <div><span>CPF</span><strong>${p.cpf || '-'}</strong></div>
+                        <div><span>Telefone</span><strong>${p.telefone || '-'}</strong></div>
+                        <div><span>Total</span><strong>${brl(p.valor_total)}</strong></div>
+                        ${isManual ? `
+                          <div><span>PIX</span><strong>${brl(p.valor_pix)} ${p.pix_pago ? '✓' : ''}</strong></div>
+                          <div><span>Cartão</span><strong>${brl(p.valor_cartao)} ${p.cartao_pago ? '✓' : ''}</strong></div>
+                        ` : ''}
+                        <div><span>Atualizado</span><strong>${fmt(p.atualizado_em)}</strong></div>
+                    </div>
+                    <div class="acoes">${acoes}</div>
+                </div>
+            `;
+        }
+
+        async function confirmarPix(id) {
+            if (!confirm('Confirma que o PIX foi recebido na sua conta?')) return;
+            await postAcao(`/api/admin/pedido/${id}/confirmar-pix`);
+        }
+
+        async function enviarLink(id) {
+            const link = document.getElementById('link-' + id).value.trim();
+            if (!link) return alert('Cole o link do cartão.');
+            if (!/^https?:\/\//i.test(link)) return alert('O link precisa começar com http:// ou https://');
+            await postAcao(`/api/admin/pedido/${id}/enviar-link-cartao`, { link_cartao: link });
+        }
+
+        async function confirmarPagamento(id) {
+            if (!confirm('Confirmar o pagamento total e liberar o acesso do cliente?')) return;
+            await postAcao(`/api/admin/pedido/${id}/confirmar-pagamento`);
+        }
+
+        async function cancelar(id) {
+            if (!confirm('Cancelar este pedido? Esta ação pode ser revertida manualmente no banco.')) return;
+            await postAcao(`/api/admin/pedido/${id}/cancelar`);
+        }
+
+        async function postAcao(url, body) {
+            try {
+                const r = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+                if (r.status === 401) { window.location.href = '/admin/login'; return; }
+                const j = await r.json();
+                if (!j.sucesso) throw new Error(j.erro || 'Erro');
+                await carregar();
+            } catch (e) {
+                alert('Erro: ' + e.message);
+            }
+        }
+
+        function copiar(text) {
+            navigator.clipboard.writeText(text).then(() => alert('Link copiado: ' + text));
+        }
+
+        async function logout() {
+            await fetch('/api/admin/logout', { method: 'POST' });
+            window.location.href = '/admin/login';
+        }
+
+        carregar();
+        intervalo = setInterval(carregar, 30000);
+    </script>
+</body>
+</html>

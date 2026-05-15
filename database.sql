@@ -17,15 +17,30 @@ CREATE TABLE IF NOT EXISTS pedidos (
     cpf VARCHAR(14),
     telefone VARCHAR(20),
     status VARCHAR(50) DEFAULT 'PENDING',
-    valor INTEGER DEFAULT 600000, -- valor em centavos (R$ 6.000,00)
+    metodo VARCHAR(20) DEFAULT 'avista',
+    valor_total INTEGER DEFAULT 600000, -- valor em centavos (R$ 6.000,00)
+    entrada_paga BOOLEAN DEFAULT false,
+    cartao_pago BOOLEAN DEFAULT false,
+    -- Suporte ao fluxo MANUAL (PIX + Cartão admin)
+    tipo_fluxo VARCHAR(20) DEFAULT 'pagbank',  -- 'pagbank' ou 'manual'
+    valor_pix INTEGER DEFAULT 0,
+    valor_cartao INTEGER DEFAULT 0,
+    pix_pago BOOLEAN DEFAULT false,
+    comprovante_pix_path VARCHAR(300),
+    link_cartao_admin TEXT,
+    observacoes_admin TEXT,
+    token_acesso VARCHAR(64),
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     dados_pagbank JSONB DEFAULT '{}'
 );
 
--- Índice para busca por email
-CREATE INDEX idx_pedidos_email ON pedidos(email);
-CREATE INDEX idx_pedidos_status ON pedidos(status);
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_pedidos_email ON pedidos(email);
+CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_token_acesso
+    ON pedidos (token_acesso)
+    WHERE token_acesso IS NOT NULL;
 
 -- ============================================
 -- TABELA: usuarios (sistema de etiquetas)

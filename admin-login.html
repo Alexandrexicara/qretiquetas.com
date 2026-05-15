@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #4b5563 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: #fff; border-radius: 14px; padding: 36px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            width: 100%; max-width: 380px;
+        }
+        h1 { font-size: 22px; color: #1f2937; margin-bottom: 6px; text-align: center; }
+        .subtitle { color: #6b7280; font-size: 13px; text-align: center; margin-bottom: 24px; }
+        label { display: block; font-size: 13px; color: #374151; margin-bottom: 6px; font-weight: 500; }
+        input { width: 100%; padding: 12px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
+        input:focus { outline: none; border-color: #4f46e5; }
+        button {
+            width: 100%; padding: 13px; border: none; border-radius: 8px;
+            background: #4f46e5; color: #fff; font-weight: 600; font-size: 14px; cursor: pointer;
+        }
+        button:hover { background: #4338ca; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .erro { background: #fee2e2; color: #991b1b; padding: 10px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; display: none; }
+        .erro.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔐 Painel Admin</h1>
+        <div class="subtitle">qrstiquetas.com</div>
+        <div class="erro" id="erro"></div>
+        <form id="form">
+            <label>Usuário</label>
+            <input type="text" id="usuario" autocomplete="username" required>
+            <label>Senha</label>
+            <input type="password" id="senha" autocomplete="current-password" required>
+            <button type="submit" id="btn">Entrar</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('form').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const btn = document.getElementById('btn');
+            const erroEl = document.getElementById('erro');
+            erroEl.classList.remove('show');
+            btn.disabled = true;
+            btn.textContent = 'Entrando...';
+            try {
+                const r = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario: document.getElementById('usuario').value.trim(),
+                        senha: document.getElementById('senha').value
+                    })
+                });
+                const j = await r.json();
+                if (!j.sucesso) throw new Error(j.erro || 'Falha no login');
+                window.location.href = '/admin';
+            } catch (e) {
+                erroEl.textContent = e.message;
+                erroEl.classList.add('show');
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
+            }
+        });
+    </script>
+</body>
+</html>

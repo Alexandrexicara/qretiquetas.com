@@ -222,6 +222,51 @@
             font-weight: 700;
             color: #667eea;
         }
+        .split-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0 8px;
+        }
+        .split-inputs label { font-size: 13px; color: #555; font-weight: 500; }
+        .split-inputs input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        .split-summary {
+            font-size: 13px;
+            color: #555;
+            margin-top: 6px;
+            padding: 8px 10px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px dashed #ccc;
+        }
+        .split-summary.ok { border-color: #28a745; color: #155724; background: #eaf7ec; }
+        .split-summary.err { border-color: #dc3545; color: #721c24; background: #fdecea; }
+        .quick-pix {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .quick-pix button {
+            background: #fff;
+            border: 1px solid #c4c8e2;
+            color: #4a4f8c;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .quick-pix button:hover { background: #f0f3ff; }
+        .payment-options { grid-template-columns: 1fr 1fr; }
+        @media (max-width: 480px) { .payment-options { grid-template-columns: 1fr; } }
         .payment-details {
             display: none;
             background: #f8f9fa;
@@ -322,6 +367,12 @@
                 <div class="price-highlight">R$ 6.000,00</div>
                 <div class="price-small">Parcele em até 12x no cartão</div>
             </div>
+            <div class="payment-option" data-method="manual" onclick="selectPayment('manual')" style="grid-column: 1 / -1;">
+                <i class="fas fa-handshake" style="color: #f39c12;"></i>
+                <h4>PIX + Cartão (combinado)</h4>
+                <div class="price-highlight">R$ 6.000,00</div>
+                <div class="price-small">Você define o valor do PIX e o restante paga no cartão (link enviado pelo administrador).</div>
+            </div>
         </div>
 
         <div class="payment-details" id="details-entrada">
@@ -343,6 +394,37 @@
             </div>
             <p style="font-size: 13px; color: #666; margin-top: 10px;">
                 <i class="fas fa-info-circle"></i> Seu acesso será liberado após a confirmação do pagamento.
+            </p>
+        </div>
+
+        <div class="payment-details" id="details-manual">
+            <div class="installment-info">
+                <p><strong>🤝 Pagamento combinado: PIX + Cartão</strong></p>
+                <p style="margin-top: 8px;">Pague parte direto na nossa <strong>chave PIX</strong> e o restante você pagará no <strong>cartão</strong> via link enviado pelo administrador.</p>
+            </div>
+            <p style="font-size: 13px; color: #555; margin: 10px 0 4px;">
+                Defina como quer dividir o valor total de <strong>R$ 6.000,00</strong>:
+            </p>
+            <div class="split-inputs">
+                <div>
+                    <label>Valor no PIX</label>
+                    <input type="text" id="valor-pix" inputmode="numeric" placeholder="R$ 0,00" value="R$ 1.000,00">
+                </div>
+                <div>
+                    <label>Valor no Cartão</label>
+                    <input type="text" id="valor-cartao" inputmode="numeric" placeholder="R$ 0,00" value="R$ 5.000,00">
+                </div>
+            </div>
+            <div class="quick-pix">
+                Sugestões PIX:
+                <button type="button" onclick="setQuickPix(50000)">R$ 500</button>
+                <button type="button" onclick="setQuickPix(100000)">R$ 1.000</button>
+                <button type="button" onclick="setQuickPix(200000)">R$ 2.000</button>
+                <button type="button" onclick="setQuickPix(300000)">R$ 3.000</button>
+            </div>
+            <div class="split-summary" id="split-summary">A soma deve ser exatamente R$ 6.000,00.</div>
+            <p style="font-size: 12px; color: #666; margin-top: 8px;">
+                <i class="fas fa-info-circle"></i> Após gerar o pedido, você verá a chave PIX, fará o pagamento e enviará o comprovante. O administrador confirma e envia o link do cartão pela mesma página.
             </p>
         </div>
 
@@ -438,14 +520,86 @@
             // Esconder todos os detalhes
             document.getElementById('details-entrada').classList.remove('active');
             document.getElementById('details-cartao').classList.remove('active');
+            document.getElementById('details-manual').classList.remove('active');
             
             // Mostrar detalhe do método escolhido
             if (method === 'entrada') {
                 document.getElementById('details-entrada').classList.add('active');
             } else if (method === 'cartao') {
                 document.getElementById('details-cartao').classList.add('active');
+            } else if (method === 'manual') {
+                document.getElementById('details-manual').classList.add('active');
+                atualizarSplit();
             }
         }
+
+        // ===== Lógica do split PIX + Cartão =====
+        const VALOR_TOTAL_MANUAL = 600000; // centavos
+
+        function brl(centavos) {
+            return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function parseBrlToCents(str) {
+            if (!str) return 0;
+            const digits = String(str).replace(/\D/g, '');
+            return digits ? parseInt(digits, 10) : 0;
+        }
+
+        function formatBrlInput(el) {
+            const cents = parseBrlToCents(el.value);
+            el.value = brl(cents);
+        }
+
+        function atualizarSplit() {
+            const elPix = document.getElementById('valor-pix');
+            const elCartao = document.getElementById('valor-cartao');
+            const elSum = document.getElementById('split-summary');
+            if (!elPix || !elCartao || !elSum) return;
+
+            const pix = parseBrlToCents(elPix.value);
+            const cartao = parseBrlToCents(elCartao.value);
+            const soma = pix + cartao;
+
+            if (soma === VALOR_TOTAL_MANUAL && pix >= 100 && cartao >= 100) {
+                elSum.className = 'split-summary ok';
+                elSum.textContent = `✓ PIX ${brl(pix)} + Cartão ${brl(cartao)} = ${brl(soma)}`;
+            } else {
+                elSum.className = 'split-summary err';
+                const diff = VALOR_TOTAL_MANUAL - soma;
+                elSum.textContent = soma === VALOR_TOTAL_MANUAL
+                    ? 'Cada valor (PIX e Cartão) deve ser pelo menos R$ 1,00.'
+                    : `Soma atual ${brl(soma)} (faltam ${brl(Math.abs(diff))} ${diff > 0 ? 'para completar' : 'a mais'}).`;
+            }
+        }
+
+        function setQuickPix(centavos) {
+            const elPix = document.getElementById('valor-pix');
+            const elCartao = document.getElementById('valor-cartao');
+            elPix.value = brl(centavos);
+            elCartao.value = brl(VALOR_TOTAL_MANUAL - centavos);
+            atualizarSplit();
+        }
+
+        // Recalcular ao digitar
+        document.addEventListener('DOMContentLoaded', function () {
+            const elPix = document.getElementById('valor-pix');
+            const elCartao = document.getElementById('valor-cartao');
+            if (!elPix || !elCartao) return;
+
+            elPix.addEventListener('input', () => {
+                const cents = parseBrlToCents(elPix.value);
+                elPix.value = brl(cents);
+                elCartao.value = brl(Math.max(0, VALOR_TOTAL_MANUAL - cents));
+                atualizarSplit();
+            });
+            elCartao.addEventListener('input', () => {
+                const cents = parseBrlToCents(elCartao.value);
+                elCartao.value = brl(cents);
+                elPix.value = brl(Math.max(0, VALOR_TOTAL_MANUAL - cents));
+                atualizarSplit();
+            });
+        });
 
         // Abrir pagamento com cartão (para etapa 2)
         function abrirPagamentoCartao() {
@@ -487,6 +641,35 @@
                 telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
                 metodo: metodoPagamento
             };
+
+            // Fluxo MANUAL: PIX + Cartão combinados
+            if (metodoPagamento === 'manual') {
+                const pix = parseBrlToCents(document.getElementById('valor-pix').value);
+                const cartao = parseBrlToCents(document.getElementById('valor-cartao').value);
+                if (pix + cartao !== VALOR_TOTAL_MANUAL || pix < 100 || cartao < 100) {
+                    alert('Ajuste a divisão PIX + Cartão para somar exatamente R$ 6.000,00 (mínimo R$ 1,00 em cada).');
+                    btn.disabled = false;
+                    loading.classList.remove('active');
+                    form.style.display = 'block';
+                    return;
+                }
+                try {
+                    const r = await fetch('/api/manual/criar-pedido', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...dados, valor_pix: pix, valor_cartao: cartao })
+                    });
+                    const j = await r.json();
+                    if (!j.sucesso) throw new Error(j.erro || 'Erro ao criar pedido manual');
+                    window.location.href = j.url_pedido; // /pedido/<token>
+                } catch (e) {
+                    alert('Erro: ' + e.message);
+                    btn.disabled = false;
+                    loading.classList.remove('active');
+                    form.style.display = 'block';
+                }
+                return;
+            }
 
             // Método parcelado - o PagBank vai lidar com as opções
             if (metodoPagamento === 'parcelado') {

@@ -13,6 +13,13 @@ yarn-error.log*
 dados/pedidos.json
 dados/usuarios_pagamento.json
 
+# Uploads (comprovantes PIX, etc.) - manter apenas .gitkeep
+uploads/*
+!uploads/.gitkeep
+!uploads/comprovantes/
+uploads/comprovantes/*
+!uploads/comprovantes/.gitkeep
+
 # Logs
 logs
 *.log

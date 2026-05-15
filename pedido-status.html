@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Pedido - qrstiquetas.com</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 32px 28px;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .header { text-align: center; margin-bottom: 18px; }
+        .header h1 { color: #667eea; font-size: 24px; }
+        .header small { color: #888; }
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge.pending  { background: #fff3cd; color: #856404; }
+        .badge.review   { background: #cfe2ff; color: #084298; }
+        .badge.aguarda  { background: #d1e7dd; color: #0f5132; }
+        .badge.cartao   { background: #e2d9f3; color: #4a148c; }
+        .badge.paid     { background: #28a745; color: #fff; }
+        .badge.cancel   { background: #f8d7da; color: #842029; }
+        .row { display: flex; justify-content: space-between; gap: 10px; margin: 6px 0; font-size: 14px; }
+        .row span:first-child { color: #666; }
+        .row span:last-child { color: #222; font-weight: 600; text-align: right; }
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 16px;
+        }
+        .section h3 { font-size: 16px; margin-bottom: 10px; color: #333; }
+        .pix-box {
+            background: #fff;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 8px;
+        }
+        .pix-key {
+            font-family: monospace;
+            font-size: 15px;
+            word-break: break-all;
+            background: #f0f3ff;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 22px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+        .btn.full { width: 100%; padding: 15px; font-size: 16px; }
+        .btn.outline { background: #fff; color: #667eea; border: 2px solid #667eea; }
+        .btn.success { background: #28a745; }
+        .upload-box {
+            border: 2px dashed #c4c8e2;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #fff;
+            transition: border-color 0.2s;
+        }
+        .upload-box:hover { border-color: #667eea; }
+        .upload-box input[type=file] { display: none; }
+        .upload-box .icon { font-size: 32px; color: #667eea; margin-bottom: 6px; }
+        .alert {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+        .alert.info { background: #e7f1ff; color: #0c4a8c; border-left: 4px solid #0d6efd; }
+        .alert.warn { background: #fff8e1; color: #6b4f00; border-left: 4px solid #f1c40f; }
+        .alert.success { background: #e8f7ee; color: #0f5132; border-left: 4px solid #28a745; }
+        .alert.error { background: #fdecea; color: #842029; border-left: 4px solid #dc3545; }
+        .small { font-size: 12px; color: #777; }
+        .center { text-align: center; }
+        .copy-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #28a745; color: #fff; padding: 10px 18px; border-radius: 30px;
+            font-size: 13px; opacity: 0; transition: opacity 0.3s;
+        }
+        .copy-toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="card" id="card">
+        <div class="header">
+            <h1>📦 Meu Pedido</h1>
+            <small>Acompanhe o status do seu pagamento</small>
+        </div>
+
+        <div id="loading" class="center" style="padding:30px 0;">
+            <i class="fas fa-circle-notch fa-spin" style="font-size:32px;color:#667eea;"></i>
+            <p style="margin-top:10px;color:#666;">Carregando pedido...</p>
+        </div>
+
+        <div id="conteudo" style="display:none;"></div>
+    </div>
+
+    <div class="copy-toast" id="toast">Copiado!</div>
+
+    <script>
+        const token = window.location.pathname.split('/').pop();
+        let pedidoCache = null;
+        let intervalo = null;
+
+        function brl(centavos) {
+            return ((centavos || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function badgeStatus(status) {
+            const map = {
+                'PENDING_PIX':                    { cls: 'pending', txt: 'Aguardando PIX' },
+                'PIX_ENVIADO':                    { cls: 'review',  txt: 'PIX em conferência' },
+                'PIX_CONFIRMADO_AGUARDA_CARTAO':  { cls: 'aguarda', txt: 'PIX confirmado - aguardando link cartão' },
+                'LINK_CARTAO_ENVIADO':            { cls: 'cartao',  txt: 'Pague o cartão' },
+                'PAID':                           { cls: 'paid',    txt: 'Pagamento concluído' },
+                'CANCELADO':                      { cls: 'cancel',  txt: 'Cancelado' }
+            };
+            const it = map[status] || { cls: 'pending', txt: status || 'Pendente' };
+            return `<span class="badge ${it.cls}">${it.txt}</span>`;
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 1800);
+        }
+
+        function copiarPix() {
+            if (!pedidoCache || !pedidoCache.pix) return;
+            navigator.clipboard.writeText(pedidoCache.pix.chave).then(() => showToast('Chave PIX copiada!'));
+        }
+
+        async function carregar() {
+            try {
+                const r = await fetch(`/api/manual/pedido/${token}`);
+                if (!r.ok) throw new Error('Pedido não encontrado');
+                const p = await r.json();
+                pedidoCache = p;
+                renderizar(p);
+                if (p.status === 'PAID' || p.status === 'CANCELADO') {
+                    if (intervalo) clearInterval(intervalo);
+                }
+            } catch (e) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('conteudo').style.display = 'block';
+                document.getElementById('conteudo').innerHTML = `
+                    <div class="alert error">Pedido não encontrado ou link inválido.</div>
+                    <a href="/checkout.html" class="btn full">Fazer novo pedido</a>
+                `;
+                if (intervalo) clearInterval(intervalo);
+            }
+        }
+
+        function renderizar(p) {
+            document.getElementById('loading').style.display = 'none';
+            const cont = document.getElementById('conteudo');
+            cont.style.display = 'block';
+
+            let html = `
+                <div class="center" style="margin-bottom: 8px;">${badgeStatus(p.status)}</div>
+                <div class="row"><span>Pedido</span><span>${p.id}</span></div>
+                <div class="row"><span>Cliente</span><span>${p.cliente}</span></div>
+                <div class="row"><span>E-mail</span><span>${p.email}</span></div>
+                <div class="row"><span>Total</span><span>${brl(p.valor_total)}</span></div>
+                <div class="row"><span>Valor PIX</span><span>${brl(p.valor_pix)}</span></div>
+                <div class="row"><span>Valor Cartão</span><span>${brl(p.valor_cartao)}</span></div>
+            `;
+
+            // Etapa 1: PIX a pagar
+            if (p.status === 'PENDING_PIX') {
+                html += `
+                    <div class="section">
+                        <h3>1. Pague o PIX</h3>
+                        <p>Faça um PIX de <strong>${brl(p.valor_pix)}</strong> para a chave abaixo:</p>
+                        <div class="pix-box">
+                            <div><strong>Titular:</strong> ${p.pix.titular || '-'}</div>
+                            ${p.pix.banco ? `<div><strong>Banco:</strong> ${p.pix.banco}</div>` : ''}
+                            <div style="margin-top:8px;"><strong>Chave PIX:</strong></div>
+                            <div class="pix-key">${p.pix.chave}</div>
+                            <button class="btn" onclick="copiarPix()"><i class="fas fa-copy"></i> Copiar chave</button>
+                        </div>
+                        <div class="alert info" style="margin-top:12px;">
+                            <i class="fas fa-info-circle"></i> Após pagar, envie o comprovante abaixo. O administrador confirmará e enviará o link para pagar o restante no cartão.
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>2. Envie o comprovante</h3>
+                        <label class="upload-box" id="upload-label">
+                            <input type="file" id="comprovante" accept="image/jpeg,image/png,application/pdf">
+                            <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                            <div><strong>Clique para selecionar</strong></div>
+                            <div class="small">JPG, PNG ou PDF · até 5 MB</div>
+                            <div class="small" id="arquivo-nome" style="margin-top:6px;color:#28a745;"></div>
+                        </label>
+                        <button class="btn full success" id="btn-enviar" style="margin-top:10px;" onclick="enviarComprovante()" disabled>
+                            <i class="fas fa-paper-plane"></i> Enviar comprovante
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Etapa 2: PIX enviado, aguardando admin
+            if (p.status === 'PIX_ENVIADO') {
+                html += `
+                    <div class="alert info" style="margin-top:14px;">
+                        <i class="fas fa-clock"></i> Comprovante recebido! Aguardando confirmação do administrador.
+                    </div>
+                    ${p.comprovante_url ? `<a class="btn outline" href="${p.comprovante_url}" target="_blank"><i class="fas fa-eye"></i> Ver comprovante enviado</a>` : ''}
+                    <p class="small center" style="margin-top:10px;">A página atualiza sozinha. Você também pode salvar este link e voltar depois.</p>
+                `;
+            }
+
+            // Etapa 3: PIX confirmado, aguardando link cartao
+            if (p.status === 'PIX_CONFIRMADO_AGUARDA_CARTAO') {
+                html += `
+                    <div class="alert success" style="margin-top:14px;">
+                        <i class="fas fa-check-circle"></i> PIX de ${brl(p.valor_pix)} confirmado pelo administrador!
+                    </div>
+                    <div class="alert info">
+                        <i class="fas fa-clock"></i> Aguardando o administrador enviar o link para você pagar o restante (<strong>${brl(p.valor_cartao)}</strong>) no cartão.
+                    </div>
+                `;
+            }
+
+            // Etapa 4: Link de cartao enviado
+            if (p.status === 'LINK_CARTAO_ENVIADO') {
+                html += `
+                    <div class="section">
+                        <h3>Pague o restante no cartão</h3>
+                        <p>O administrador enviou o link para pagar <strong>${brl(p.valor_cartao)}</strong> no cartão:</p>
+                        <a class="btn full" href="${p.link_cartao}" target="_blank" style="margin-top:10px;">
+                            <i class="fas fa-credit-card"></i> Pagar ${brl(p.valor_cartao)} no cartão
+                        </a>
+                        ${p.observacoes ? `<div class="alert info" style="margin-top:10px;">${p.observacoes}</div>` : ''}
+                        <p class="small" style="margin-top:10px;">Após o pagamento, aguarde o administrador confirmar e seu acesso será liberado.</p>
+                    </div>
+                `;
+            }
+
+            // Etapa 5: PAID
+            if (p.status === 'PAID') {
+                html += `
+                    <div class="alert success center" style="font-size:15px;">
+                        <i class="fas fa-check-circle" style="font-size:28px;display:block;margin-bottom:6px;"></i>
+                        <strong>Pagamento concluído!</strong><br>
+                        Seu acesso ao sistema foi liberado. Confira seu e-mail.
+                    </div>
+                    <a href="/cadastro.html" class="btn full">Acessar Sistema</a>
+                `;
+            }
+
+            // Cancelado
+            if (p.status === 'CANCELADO') {
+                html += `
+                    <div class="alert error">
+                        <i class="fas fa-times-circle"></i> Este pedido foi cancelado.
+                    </div>
+                    <a href="/checkout.html" class="btn full">Fazer novo pedido</a>
+                `;
+            }
+
+            cont.innerHTML = html;
+
+            // Liga eventos do upload (se houver)
+            const inp = document.getElementById('comprovante');
+            if (inp) {
+                inp.addEventListener('change', () => {
+                    const f = inp.files[0];
+                    if (!f) return;
+                    document.getElementById('arquivo-nome').textContent = '✓ ' + f.name;
+                    document.getElementById('btn-enviar').disabled = false;
+                });
+            }
+        }
+
+        async function enviarComprovante() {
+            const inp = document.getElementById('comprovante');
+            if (!inp || !inp.files[0]) return;
+            const btn = document.getElementById('btn-enviar');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            const fd = new FormData();
+            fd.append('comprovante', inp.files[0]);
+            try {
+                const r = await fetch(`/api/manual/upload-comprovante/${token}`, { method: 'POST', body: fd });
+                const j = await r.json();
+                if (!j.sucesso) throw new Error(j.erro || 'Falha ao enviar');
+                await carregar();
+            } catch (e) {
+                alert('Erro: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar comprovante';
+            }
+        }
+
+        carregar();
+        intervalo = setInterval(carregar, 10000);
+    </script>
+</body>
+</html>
